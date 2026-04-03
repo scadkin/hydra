@@ -8,13 +8,8 @@ import ResponsePanel from "../components/ResponsePanel";
 import ResponseGrid from "../components/ResponseGrid";
 
 /**
- * page.tsx
- * Main orchestrator page. Uses MOCK data to simulate SSE streaming
- * from multiple LLM providers in parallel. Real API integration
- * will replace the mock logic later.
+ * page.tsx — Main page with mock streaming.
  */
-
-// ─── Types ───
 
 interface ProviderResponse {
   id: string;
@@ -25,58 +20,51 @@ interface ProviderResponse {
   error?: string;
 }
 
-// ─── Mock provider definitions ───
-
+/* Muted warm palette — each model has subtle distinction */
 const MOCK_PROVIDERS = [
-  { id: "claude", name: "Claude", color: "#d97706" },
-  { id: "gemini", name: "Gemini", color: "#4285f4" },
-  { id: "grok", name: "Grok", color: "#1d9bf0" },
-  { id: "deepseek", name: "DeepSeek", color: "#4f6df5" },
-  { id: "openrouter-llama", name: "Llama", color: "#764abc" },
-  { id: "openrouter-qwen", name: "Qwen", color: "#06b6d4" },
-  { id: "openrouter-deepseek-r1", name: "DeepSeek R1", color: "#10b981" },
+  { id: "claude", name: "Claude", color: "#d4a574" },
+  { id: "gemini", name: "Gemini", color: "#7a9ec2" },
+  { id: "grok", name: "Grok", color: "#89b4c8" },
+  { id: "deepseek", name: "DeepSeek", color: "#8888b8" },
+  { id: "openrouter-llama", name: "Llama", color: "#a888a8" },
+  { id: "openrouter-qwen", name: "Qwen", color: "#7ab0a0" },
+  { id: "openrouter-deepseek-r1", name: "DeepSeek R1", color: "#88b088" },
 ];
 
-// Some varied lorem-ipsum-style chunks for realistic-looking streaming
-const MOCK_WORDS = [
-  "The ", "answer ", "depends ", "on ", "several ", "factors. ",
-  "First, ", "consider ", "the ", "underlying ", "architecture ",
-  "of ", "the ", "system. ", "Each ", "component ", "interacts ",
-  "with ", "others ", "through ", "well-defined ", "interfaces. ",
-  "This ", "allows ", "for ", "modularity ", "and ", "flexibility. ",
-  "In ", "practice, ", "you'll ", "want ", "to ", "evaluate ",
-  "trade-offs ", "between ", "performance ", "and ", "complexity. ",
-  "A ", "common ", "approach ", "is ", "to ", "start ", "simple ",
-  "and ", "iterate. ", "Let ", "me ", "break ", "this ", "down ",
-  "step ", "by ", "step.\n\n",
-  "1. ", "Define ", "your ", "requirements ", "clearly.\n",
-  "2. ", "Choose ", "the ", "right ", "tools ", "for ", "the ", "job.\n",
-  "3. ", "Build ", "incrementally, ", "testing ", "as ", "you ", "go.\n\n",
-  "The ", "key ", "insight ", "here ", "is ", "that ", "simplicity ",
-  "often ", "wins. ", "Over-engineering ", "leads ", "to ", "technical ",
-  "debt ", "that ", "compounds ", "over ", "time. ", "Focus ",
-  "on ", "shipping ", "value ", "to ", "users ", "and ", "refining ",
-  "based ", "on ", "feedback.\n\n",
-  "Hope ", "that ", "helps! ", "Let ", "me ", "know ", "if ",
-  "you'd ", "like ", "me ", "to ", "go ", "deeper ", "on ",
-  "any ", "of ", "these ", "points.",
+const MOCK_CHUNKS = [
+  "That's a great question. ", "Let me think through this carefully.\n\n",
+  "The short answer is that it depends on context, ",
+  "but here's how I'd break it down:\n\n",
+  "First, consider what you're optimizing for. ",
+  "If speed matters most, you'd want to ",
+  "minimize round trips and batch operations where possible. ",
+  "If correctness is the priority, ",
+  "then a more methodical approach works better.\n\n",
+  "Here's a practical framework:\n\n",
+  "1. Start with the simplest version that could work\n",
+  "2. Measure actual performance, not guesses\n",
+  "3. Optimize only the bottlenecks you find\n",
+  "4. Keep the code readable throughout\n\n",
+  "The trap most people fall into is premature optimization. ",
+  "They build complex caching layers before knowing ",
+  "whether latency is even a problem. ",
+  "Profile first, then decide.\n\n",
+  "In my experience, the 80/20 rule applies here — ",
+  "80% of gains come from 20% of the effort. ",
+  "Focus there.\n\n",
+  "Want me to go deeper on any of these points?",
 ];
 
 export default function Home() {
   const [responses, setResponses] = useState<ProviderResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Track interval IDs so we can clean up if needed
   const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
 
-  const handleSubmit = useCallback((prompt: string) => {
-    // Clear any running intervals from a previous query
+  const handleSubmit = useCallback((_prompt: string) => {
     intervalsRef.current.forEach(clearInterval);
     intervalsRef.current = [];
-
     setIsLoading(true);
 
-    // Initialize all providers as streaming with empty text
     const initial: ProviderResponse[] = MOCK_PROVIDERS.map((p) => ({
       ...p,
       text: "",
@@ -84,36 +72,23 @@ export default function Home() {
     }));
     setResponses(initial);
 
-    // Start a mock stream for each provider
     MOCK_PROVIDERS.forEach((provider, index) => {
-      let wordIndex = 0;
-
-      // Randomize the starting position in the word list for variety
-      const startOffset = Math.floor(Math.random() * 20);
-
-      // Each provider streams for a random 2-5 seconds
-      const totalDuration = 2000 + Math.random() * 3000;
+      let chunkIndex = 0;
+      const startOffset = Math.floor(Math.random() * 8);
+      const totalDuration = 2500 + Math.random() * 3500;
       const startTime = Date.now();
-
-      // Provider at index 4 (Llama) simulates an error after 1 second
       const willError = index === 4;
-
-      const intervalMs = 50 + Math.random() * 100; // 50-150ms between chunks
+      const intervalMs = 60 + Math.random() * 120;
 
       const intervalId = setInterval(() => {
         const elapsed = Date.now() - startTime;
 
-        // Error simulation
-        if (willError && elapsed > 1000) {
+        if (willError && elapsed > 1200) {
           clearInterval(intervalId);
           setResponses((prev) =>
             prev.map((r) =>
               r.id === provider.id
-                ? {
-                    ...r,
-                    status: "error" as const,
-                    error: "Connection timed out — model unavailable",
-                  }
+                ? { ...r, status: "error" as const, error: "Request timed out" }
                 : r
             )
           );
@@ -121,7 +96,6 @@ export default function Home() {
           return;
         }
 
-        // Done condition
         if (elapsed >= totalDuration) {
           clearInterval(intervalId);
           setResponses((prev) =>
@@ -133,14 +107,11 @@ export default function Home() {
           return;
         }
 
-        // Append next word chunk
-        const word =
-          MOCK_WORDS[(startOffset + wordIndex) % MOCK_WORDS.length];
-        wordIndex++;
-
+        const chunk = MOCK_CHUNKS[(startOffset + chunkIndex) % MOCK_CHUNKS.length];
+        chunkIndex++;
         setResponses((prev) =>
           prev.map((r) =>
-            r.id === provider.id ? { ...r, text: r.text + word } : r
+            r.id === provider.id ? { ...r, text: r.text + chunk } : r
           )
         );
       }, intervalMs);
@@ -148,15 +119,12 @@ export default function Home() {
       intervalsRef.current.push(intervalId);
     });
 
-    // Helper: check if all providers are done/errored, then stop loading
     function checkAllDone() {
       setResponses((prev) => {
         const allFinished = prev.every(
           (r) => r.status === "done" || r.status === "error"
         );
-        if (allFinished) {
-          setIsLoading(false);
-        }
+        if (allFinished) setIsLoading(false);
         return prev;
       });
     }
@@ -165,11 +133,13 @@ export default function Home() {
   return (
     <>
       <Background />
-      <main className="relative z-10 min-h-screen max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="relative z-10 min-h-screen max-w-5xl mx-auto px-6 sm:px-8 pb-16">
         <Header />
-        <div className="mt-8 max-w-3xl mx-auto">
+
+        <div className="max-w-2xl mx-auto">
           <QueryInput onSubmit={handleSubmit} isLoading={isLoading} />
         </div>
+
         {responses.length > 0 && (
           <ResponseGrid>
             {responses.map((r) => (

@@ -5,8 +5,10 @@ import { motion } from "motion/react";
 
 /**
  * ResponsePanel.tsx
- * A glassmorphism card that shows a single provider's streaming response.
- * Features a colored top border, status dot, and auto-scrolling text area.
+ *
+ * Each card is a surface tile. Provider identity via colored square accent.
+ * Response text in monospace at readable contrast (#aaa, not #999).
+ * Header uses the display font for provider names.
  */
 
 interface ResponsePanelProps {
@@ -17,13 +19,12 @@ interface ResponsePanelProps {
   error?: string;
 }
 
-// Animation variants — used by parent stagger
 const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring" as const, stiffness: 300, damping: 30 },
+    transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] as const },
   },
 };
 
@@ -36,7 +37,6 @@ export default function ResponsePanel({
 }: ResponsePanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new text arrives during streaming
   useEffect(() => {
     if (scrollRef.current && status === "streaming") {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -46,60 +46,66 @@ export default function ResponsePanel({
   return (
     <motion.div
       variants={cardVariants}
-      whileHover={{ y: -2, boxShadow: `0 8px 40px ${color}10` }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl overflow-hidden min-h-[200px] flex flex-col"
+      className="flex flex-col min-h-[260px] rounded-xl overflow-hidden"
       style={{
-        // Subtle colored glow at the top
-        borderTopWidth: "2px",
-        borderTopColor: color,
-        boxShadow: `inset 0 1px 0 0 ${color}22, 0 4px 24px rgba(0,0,0,0.2)`,
+        background: "#141414",
+        border: "1px solid rgba(255,255,255,0.05)",
       }}
     >
-      {/* ─── Header bar ─── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-        {/* Provider name */}
-        <span className="text-sm font-medium text-gray-300">{name}</span>
-
-        {/* Status dot */}
-        <span className="flex items-center gap-2">
-          {status === "streaming" && (
-            <span className="text-[10px] text-gray-500 uppercase tracking-wider">
-              streaming
-            </span>
-          )}
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-5 py-3"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style={{ backgroundColor: color }} />
           <span
-            className="w-2 h-2 rounded-full"
-            style={{
-              backgroundColor:
-                status === "streaming"
-                  ? color
-                  : status === "done"
-                    ? "#22c55e"
-                    : status === "error"
-                      ? "#ef4444"
-                      : "#6b7280",
-              animation:
-                status === "streaming"
-                  ? "status-pulse 1.5s ease-in-out infinite"
-                  : "none",
-            }}
-          />
-        </span>
+            className="text-[14px] font-semibold text-[#ddd] tracking-[-0.01em]"
+            style={{ fontFamily: "var(--font-display), var(--font-geist-sans), sans-serif" }}
+          >
+            {name}
+          </span>
+        </div>
+
+        {status === "streaming" && (
+          <span className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#d4a574]"
+              style={{ animation: "blink 1s step-end infinite" }}
+            />
+            <span className="text-[10px] text-[#555] font-mono uppercase tracking-widest">
+              live
+            </span>
+          </span>
+        )}
+        {status === "done" && (
+          <span className="text-[10px] text-[#444] font-mono uppercase tracking-widest">
+            done
+          </span>
+        )}
+        {status === "error" && (
+          <span className="text-[10px] text-red-400/70 font-mono uppercase tracking-widest">
+            failed
+          </span>
+        )}
       </div>
 
-      {/* ─── Response body ─── */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3">
+      {/* Body */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 max-h-[400px]">
         {status === "error" && error ? (
-          <p className="text-red-400 text-sm">{error}</p>
+          <p className="text-[12px] text-red-400/50 leading-relaxed font-mono">{error}</p>
         ) : status === "idle" ? (
-          <p className="text-gray-600 text-sm italic">Waiting for prompt...</p>
+          <p className="text-[12px] text-[#2a2a2a] font-mono">Waiting for query...</p>
         ) : (
-          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-300 leading-relaxed">
+          <pre className="whitespace-pre-wrap font-mono text-[12px] text-[#aaa] leading-[1.8]">
             {text}
-            {/* Blinking cursor while streaming */}
             {status === "streaming" && (
-              <span className="inline-block w-[2px] h-4 bg-gray-400 ml-0.5 align-text-bottom animate-pulse" />
+              <span
+                className="inline-block w-[2px] h-[14px] ml-0.5 align-text-bottom"
+                style={{
+                  backgroundColor: color,
+                  animation: "blink 0.7s step-end infinite",
+                }}
+              />
             )}
           </pre>
         )}

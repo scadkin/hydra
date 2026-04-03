@@ -58,20 +58,20 @@ export default function HydraScene() {
       renderer.setSize(window.innerWidth, window.innerHeight);
 
       // ─── ASCII Effect ───
-      // Characters from sparse to dense — creates depth illusion
-      const charset = " .:-=+*#%@$";
+      // More characters = smoother gradients. Resolution 0.14 = denser grid.
+      const charset = " .,:;!|\\/*+?%S#@$";
       const effect = new AsciiEffect(renderer, charset, {
         invert: true,
-        resolution: 0.2,
+        resolution: 0.14,
       });
       effect.setSize(window.innerWidth, window.innerHeight);
       effect.domElement.style.color = "#c9a050";
       effect.domElement.style.backgroundColor = "transparent";
       effect.domElement.style.fontFamily =
         "'Geist Mono', 'SF Mono', 'Fira Code', monospace";
-      effect.domElement.style.fontSize = "8px";
-      effect.domElement.style.lineHeight = "8px";
-      effect.domElement.style.letterSpacing = "2px";
+      effect.domElement.style.fontSize = "6px";
+      effect.domElement.style.lineHeight = "6px";
+      effect.domElement.style.letterSpacing = "1px";
       el.appendChild(effect.domElement);
 
       // ─── Lighting — dramatic for strong ASCII contrast ───
@@ -153,11 +153,11 @@ export default function HydraScene() {
           const x = baseAngle * t * 2.0;
           const y = t * length;
 
-          // INTERTWINING: helical component that makes necks weave
-          // The helix amplitude increases from base to mid, then decreases near head
+          // INTERTWINING: helical component that makes necks weave dramatically
+          // High amplitude in the middle, tapering at base and head
           const helixAmp =
-            Math.sin(t * Math.PI) * 0.6 * (1.0 - Math.abs(spread) * 0.3);
-          const helixFreq = 2.0; // number of rotations
+            Math.sin(t * Math.PI) * 1.1 * (1.0 - Math.abs(spread) * 0.25);
+          const helixFreq = 2.5; // more rotations = tighter weave
           const helixAngle =
             t * helixFreq * Math.PI * 2 + helixPhase + time * 0.3;
 
@@ -182,87 +182,123 @@ export default function HydraScene() {
       // ─── Dragon head geometry ───
       function createHead() {
         const g = new THREE.Group();
+        // Scale the entire head up — needs to be dramatic in ASCII
+        g.scale.set(1.6, 1.6, 1.6);
 
-        // Skull — long, angular
+        // Skull — massive, elongated, angular
         const skull = new THREE.Mesh(
-          new THREE.SphereGeometry(0.5, 10, 8),
+          new THREE.SphereGeometry(0.6, 10, 8),
           dragonMat
         );
-        skull.scale.set(0.85, 0.65, 1.9);
+        skull.scale.set(1.0, 0.7, 2.2);
         g.add(skull);
 
-        // Snout
+        // Snout — long and tapered, aggressive
         const snout = new THREE.Mesh(
-          new THREE.ConeGeometry(0.25, 1.2, 6),
+          new THREE.ConeGeometry(0.32, 1.5, 6),
           dragonMat
         );
         snout.rotation.x = -Math.PI / 2;
-        snout.position.z = 1.1;
+        snout.position.z = 1.3;
         g.add(snout);
 
-        // Brow ridge
+        // Brow ridge — makes it look angry/armored
         const brow = new THREE.Mesh(
-          new THREE.BoxGeometry(0.75, 0.14, 0.5),
+          new THREE.BoxGeometry(0.9, 0.18, 0.6),
           dragonMat
         );
-        brow.position.set(0, 0.28, 0.15);
+        brow.position.set(0, 0.32, 0.15);
         g.add(brow);
 
-        // Lower jaw
-        const jawGeo = new THREE.ConeGeometry(0.2, 0.9, 5);
-        const jaw = new THREE.Mesh(jawGeo, dragonMat);
+        // Lower jaw — opens wider
+        const jaw = new THREE.Mesh(
+          new THREE.ConeGeometry(0.26, 1.1, 5),
+          dragonMat
+        );
         jaw.rotation.x = -Math.PI / 2;
-        jaw.position.set(0, -0.2, 0.7);
+        jaw.position.set(0, -0.28, 0.8);
         g.add(jaw);
 
-        // Teeth — sharp spikes
-        const toothGeo = new THREE.ConeGeometry(0.025, 0.15, 4);
-        for (let i = 0; i < 8; i++) {
-          const tt = (i / 7) * 0.8 + 0.2;
-          const side = i % 2 === 0 ? 0.07 : -0.07;
+        // Teeth — large, visible fangs
+        const toothGeo = new THREE.ConeGeometry(0.04, 0.22, 4);
+        for (let i = 0; i < 10; i++) {
+          const tt = (i / 9) * 0.85 + 0.15;
+          const side = i % 2 === 0 ? 0.1 : -0.1;
           const tooth = new THREE.Mesh(toothGeo, brightMat);
-          tooth.position.set(side, -0.22, tt * 1.3);
+          tooth.position.set(side, -0.25, tt * 1.5);
           tooth.rotation.x = Math.PI;
           g.add(tooth);
         }
-
-        // Horns — large, curved
+        // Two big front fangs
         for (let side = -1; side <= 1; side += 2) {
+          const fang = new THREE.Mesh(
+            new THREE.ConeGeometry(0.05, 0.35, 4),
+            brightMat
+          );
+          fang.position.set(side * 0.08, -0.3, 1.6);
+          fang.rotation.x = Math.PI;
+          g.add(fang);
+        }
+
+        // Horns — MASSIVE, swept back like GoT dragons
+        for (let side = -1; side <= 1; side += 2) {
+          // Primary horn — large
           const horn = new THREE.Mesh(
-            new THREE.ConeGeometry(0.08, 0.8, 6),
+            new THREE.ConeGeometry(0.1, 1.2, 6),
             dragonMat
           );
-          horn.position.set(side * 0.32, 0.3, -0.3);
-          horn.rotation.x = Math.PI * 0.7;
-          horn.rotation.z = side * 0.3;
+          horn.position.set(side * 0.38, 0.35, -0.4);
+          horn.rotation.x = Math.PI * 0.65;
+          horn.rotation.z = side * 0.35;
           g.add(horn);
 
+          // Secondary horn
           const horn2 = new THREE.Mesh(
-            new THREE.ConeGeometry(0.05, 0.5, 5),
+            new THREE.ConeGeometry(0.06, 0.7, 5),
             dragonMat
           );
-          horn2.position.set(side * 0.22, 0.25, 0.0);
-          horn2.rotation.x = Math.PI * 0.65;
-          horn2.rotation.z = side * 0.15;
+          horn2.position.set(side * 0.28, 0.3, 0.0);
+          horn2.rotation.x = Math.PI * 0.6;
+          horn2.rotation.z = side * 0.2;
           g.add(horn2);
+
+          // Third small horn — crest
+          const horn3 = new THREE.Mesh(
+            new THREE.ConeGeometry(0.04, 0.45, 4),
+            dragonMat
+          );
+          horn3.position.set(side * 0.18, 0.28, 0.2);
+          horn3.rotation.x = Math.PI * 0.55;
+          horn3.rotation.z = side * 0.1;
+          g.add(horn3);
+
+          // Cheek/jaw spikes
+          const cheek = new THREE.Mesh(
+            new THREE.ConeGeometry(0.04, 0.3, 4),
+            dragonMat
+          );
+          cheek.position.set(side * 0.4, -0.05, 0.1);
+          cheek.rotation.z = side * 1.2;
+          g.add(cheek);
         }
 
         // Eyes — BRIGHT for ASCII contrast
-        const eyeGeo = new THREE.SphereGeometry(0.1, 8, 6);
+        const eyeGeo = new THREE.SphereGeometry(0.12, 8, 6);
         for (let side = -1; side <= 1; side += 2) {
           const eye = new THREE.Mesh(eyeGeo, brightMat);
-          eye.position.set(side * 0.26, 0.14, 0.5);
+          eye.position.set(side * 0.3, 0.16, 0.55);
           g.add(eye);
         }
 
-        // Spines down the back of the head
-        for (let i = 0; i < 5; i++) {
+        // Spine crest down the back of skull + neck transition
+        for (let i = 0; i < 8; i++) {
+          const h = 0.35 - i * 0.02;
           const sp = new THREE.Mesh(
-            new THREE.ConeGeometry(0.04, 0.25, 4),
+            new THREE.ConeGeometry(0.05, h, 4),
             dragonMat
           );
-          sp.position.set(0, 0.3, -0.2 - i * 0.2);
-          sp.rotation.x = Math.PI * 0.85;
+          sp.position.set(0, 0.35, -0.15 - i * 0.18);
+          sp.rotation.x = Math.PI * 0.82;
           g.add(sp);
         }
 
@@ -284,16 +320,18 @@ export default function HydraScene() {
         const curve = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.5);
 
         // Neck — thicker with taper
-        const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.28, 10, false);
+        const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.35, 10, false);
         const neckMesh = new THREE.Mesh(tubeGeo, dragonMat);
         creature.add(neckMesh);
 
-        // Spines along neck
-        for (let s = 0; s < 8; s++) {
-          const st = (s + 1) / 9;
+        // Vertebrae spines along the entire neck — dense ridge
+        for (let s = 0; s < 14; s++) {
+          const st = (s + 1) / 15;
           const pt = curve.getPointAt(st);
+          // Spine height tapers from large near body to small near head
+          const spineH = 0.3 * (1.0 - st * 0.5);
           const sp = new THREE.Mesh(
-            new THREE.ConeGeometry(0.04, 0.22, 4),
+            new THREE.ConeGeometry(0.05, spineH, 4),
             dragonMat
           );
           sp.position.copy(pt);

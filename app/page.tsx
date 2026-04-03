@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import Background from "../components/Background";
+import HydraAscii from "../components/HydraAscii";
 import Header from "../components/Header";
 import QueryInput from "../components/QueryInput";
-import ResponsePanel from "../components/ResponsePanel";
 import ResponseGrid from "../components/ResponseGrid";
+import CardDesignC from "../components/cards/CardDesignC";
 
 /**
- * page.tsx — Main page with mock streaming.
+ * page.tsx — Main page with animated ASCII Hydra background + Design C cards.
  */
 
 interface ProviderResponse {
@@ -20,7 +20,6 @@ interface ProviderResponse {
   error?: string;
 }
 
-/* Muted warm palette — each model has subtle distinction */
 const MOCK_PROVIDERS = [
   { id: "claude", name: "Claude", color: "#d4a574" },
   { id: "gemini", name: "Gemini", color: "#7a9ec2" },
@@ -37,7 +36,7 @@ const MOCK_CHUNKS = [
   "but here's how I'd break it down:\n\n",
   "First, consider what you're optimizing for. ",
   "If speed matters most, you'd want to ",
-  "minimize round trips and batch operations where possible. ",
+  "minimize round trips and batch operations. ",
   "If correctness is the priority, ",
   "then a more methodical approach works better.\n\n",
   "Here's a practical framework:\n\n",
@@ -46,12 +45,7 @@ const MOCK_CHUNKS = [
   "3. Optimize only the bottlenecks you find\n",
   "4. Keep the code readable throughout\n\n",
   "The trap most people fall into is premature optimization. ",
-  "They build complex caching layers before knowing ",
-  "whether latency is even a problem. ",
   "Profile first, then decide.\n\n",
-  "In my experience, the 80/20 rule applies here — ",
-  "80% of gains come from 20% of the effort. ",
-  "Focus there.\n\n",
   "Want me to go deeper on any of these points?",
 ];
 
@@ -66,74 +60,49 @@ export default function Home() {
     setIsLoading(true);
 
     const initial: ProviderResponse[] = MOCK_PROVIDERS.map((p) => ({
-      ...p,
-      text: "",
-      status: "streaming" as const,
+      ...p, text: "", status: "streaming" as const,
     }));
     setResponses(initial);
 
     MOCK_PROVIDERS.forEach((provider, index) => {
-      let chunkIndex = 0;
-      const startOffset = Math.floor(Math.random() * 8);
-      const totalDuration = 2500 + Math.random() * 3500;
-      const startTime = Date.now();
+      let ci = 0;
+      const offset = Math.floor(Math.random() * 6);
+      const dur = 2500 + Math.random() * 3500;
+      const start = Date.now();
       const willError = index === 4;
-      const intervalMs = 60 + Math.random() * 120;
+      const ms = 60 + Math.random() * 120;
 
-      const intervalId = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-
+      const id = setInterval(() => {
+        const elapsed = Date.now() - start;
         if (willError && elapsed > 1200) {
-          clearInterval(intervalId);
-          setResponses((prev) =>
-            prev.map((r) =>
-              r.id === provider.id
-                ? { ...r, status: "error" as const, error: "Request timed out" }
-                : r
-            )
-          );
-          checkAllDone();
-          return;
+          clearInterval(id);
+          setResponses(p => p.map(r => r.id === provider.id ? { ...r, status: "error" as const, error: "Request timed out" } : r));
+          checkDone(); return;
         }
-
-        if (elapsed >= totalDuration) {
-          clearInterval(intervalId);
-          setResponses((prev) =>
-            prev.map((r) =>
-              r.id === provider.id ? { ...r, status: "done" as const } : r
-            )
-          );
-          checkAllDone();
-          return;
+        if (elapsed >= dur) {
+          clearInterval(id);
+          setResponses(p => p.map(r => r.id === provider.id ? { ...r, status: "done" as const } : r));
+          checkDone(); return;
         }
-
-        const chunk = MOCK_CHUNKS[(startOffset + chunkIndex) % MOCK_CHUNKS.length];
-        chunkIndex++;
-        setResponses((prev) =>
-          prev.map((r) =>
-            r.id === provider.id ? { ...r, text: r.text + chunk } : r
-          )
-        );
-      }, intervalMs);
-
-      intervalsRef.current.push(intervalId);
+        const chunk = MOCK_CHUNKS[(offset + ci) % MOCK_CHUNKS.length];
+        ci++;
+        setResponses(p => p.map(r => r.id === provider.id ? { ...r, text: r.text + chunk } : r));
+      }, ms);
+      intervalsRef.current.push(id);
     });
 
-    function checkAllDone() {
-      setResponses((prev) => {
-        const allFinished = prev.every(
-          (r) => r.status === "done" || r.status === "error"
-        );
-        if (allFinished) setIsLoading(false);
-        return prev;
+    function checkDone() {
+      setResponses(p => {
+        if (p.every(r => r.status === "done" || r.status === "error")) setIsLoading(false);
+        return p;
       });
     }
   }, []);
 
   return (
     <>
-      <Background />
-      <main className="relative z-10 min-h-screen max-w-5xl mx-auto px-6 sm:px-8 pb-16">
+      <HydraAscii />
+      <main className="relative z-10 min-h-screen max-w-6xl mx-auto px-6 sm:px-8 pb-24">
         <Header />
 
         <div className="max-w-2xl mx-auto">
@@ -143,7 +112,7 @@ export default function Home() {
         {responses.length > 0 && (
           <ResponseGrid>
             {responses.map((r) => (
-              <ResponsePanel
+              <CardDesignC
                 key={r.id}
                 name={r.name}
                 color={r.color}

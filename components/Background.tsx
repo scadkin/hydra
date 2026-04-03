@@ -1,26 +1,69 @@
 "use client";
 
+import { motion } from "motion/react";
+
 /**
  * Background.tsx
- * A single, warm, soft radial glow behind the search area.
- * NOT aurora blobs. NOT gradient mesh. Just one purposeful light source
- * that draws the eye to the search bar — like a spotlight on a stage.
+ * ASCII art Hydra — the mythological multi-headed serpent.
+ * Multiple heads = multiple AI models. Thematic and distinctive.
+ * Fades in subtly behind the hero content.
  */
+
+const HYDRA_ASCII = `
+                                          ___
+                                        /   \\
+                              ___      / o o \\      ___
+                            /   \\    |  \\_/  |    /   \\
+                           / o o \\    \\     /    / o o \\
+                          |  \\_/  |    |   |    |  \\_/  |
+                           \\     /     |   |     \\     /
+                     ___    |   |      |   |      |   |    ___
+                   /   \\   |   |      |   |      |   |   /   \\
+                  / o o \\  |   |     /     \\     |   |  / o o \\
+                 |  \\_/  |  \\   \\   /       \\   /   /  |  \\_/  |
+                  \\     /    \\   \\_/         \\_/   /    \\     /
+                   |   |      \\                   /      |   |
+                   |   |       \\                 /       |   |
+                   |   |        \\               /        |   |
+                    \\   \\        |             |        /   /
+                     \\   \\       |             |       /   /
+                      \\   \\      |             |      /   /
+                       \\   \\     |             |     /   /
+                        \\   \\____|             |____/   /
+                         \\                             /
+                          \\___________________________/
+                                    |     |
+                                    |     |
+                                    |     |
+                                   /       \\
+                                  /  ~~~~~  \\
+                                 /  ~~~~~~~  \\
+                                /_____________\\
+`;
+
 export default function Background() {
   return (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-      {/* Single warm glow — centered at the top where the search bar is */}
+      {/* Warm gradient atmosphere — subtle but present */}
       <div
-        className="absolute top-[15%] left-1/2"
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px]"
         style={{
-          width: "800px",
-          height: "400px",
-          background: "radial-gradient(ellipse at center, rgba(212,165,116,0.08) 0%, transparent 70%)",
-          animation: "glow-shift 8s ease-in-out infinite",
-          transform: "translate(-50%, -50%)",
+          background: "radial-gradient(ellipse at center, rgba(212,165,116,0.06) 0%, transparent 70%)",
         }}
       />
-      {/* Subtle noise for texture */}
+
+      {/* ASCII Hydra — centered behind the hero */}
+      <motion.pre
+        className="absolute top-[2%] left-1/2 -translate-x-1/2 font-mono text-[10px] sm:text-[11px] md:text-[12px] leading-[1.2] text-[#1a1a1a] select-none whitespace-pre"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 2, delay: 0.5 }}
+        aria-hidden="true"
+      >
+        {HYDRA_ASCII}
+      </motion.pre>
+
+      {/* Noise texture */}
       <div
         className="absolute inset-0 opacity-[0.02]"
         style={{

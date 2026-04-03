@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import HydraAscii from "../components/HydraAscii";
+import HydraScene from "../components/HydraScene";
 import Header from "../components/Header";
 import QueryInput from "../components/QueryInput";
 import ResponseGrid from "../components/ResponseGrid";
@@ -101,7 +101,7 @@ export default function Home() {
 
   return (
     <>
-      <HydraAscii />
+      <HydraScene />
       <main className="relative z-10 min-h-screen max-w-6xl mx-auto px-6 sm:px-8 pb-24">
         <Header />
 

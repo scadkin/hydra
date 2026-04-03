@@ -3,352 +3,378 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
-const NUM_HEADS = 7;
-const BODY_COLOR = 0x1a1a1a;
-const EYE_COLOR = 0xff4400;
-const BG_COLOR = 0x0c0c0c;
+/**
+ * HydraScene.tsx
+ *
+ * Procedural 3D Hydra dragon — 7 heads, Game of Thrones inspired.
+ * MUCH more menacing than v1: thicker necks, bigger heads with horns/spikes/teeth,
+ * dramatic lighting, brighter glowing eyes, higher opacity.
+ */
 
-interface HeadGroup {
+const NUM_HEADS = 7;
+const BG = 0x0c0c0c;
+
+/* Dragon scale material — dark, slightly metallic */
+function scaleMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: 0x111111,
+    roughness: 0.55,
+    metalness: 0.5,
+  });
+}
+
+/* Glowing eye material */
+function eyeMaterial(): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: 0xff2200,
+    emissive: 0xff2200,
+    emissiveIntensity: 3,
+    roughness: 0.2,
+    metalness: 0,
+  });
+}
+
+interface HeadData {
   group: THREE.Group;
-  eyes: THREE.Mesh[];
-  eyeLights: THREE.PointLight[];
+  eyes: THREE.MeshStandardMaterial[];
+  jawPivot: THREE.Group;
+}
+
+function createDragonHead(mat: THREE.MeshStandardMaterial): HeadData {
+  const group = new THREE.Group();
+  const eyeMats: THREE.MeshStandardMaterial[] = [];
+
+  // --- Skull: elongated, angular ---
+  const skullGeo = new THREE.SphereGeometry(0.5, 8, 6);
+  const skull = new THREE.Mesh(skullGeo, mat);
+  skull.scale.set(0.9, 0.7, 1.8); // long and flat
+  group.add(skull);
+
+  // --- Upper snout: long, tapered ---
+  const snoutGeo = new THREE.ConeGeometry(0.28, 1.0, 6);
+  const snout = new THREE.Mesh(snoutGeo, mat);
+  snout.rotation.x = -Math.PI / 2;
+  snout.position.set(0, 0, 1.0);
+  group.add(snout);
+
+  // --- Brow ridge: makes it look angry ---
+  const browGeo = new THREE.BoxGeometry(0.7, 0.12, 0.5);
+  const brow = new THREE.Mesh(browGeo, mat);
+  brow.position.set(0, 0.25, 0.15);
+  group.add(brow);
+
+  // --- Lower jaw: hinged open slightly ---
+  const jawPivot = new THREE.Group();
+  jawPivot.position.set(0, -0.15, 0.3);
+  const jawGeo = new THREE.ConeGeometry(0.22, 0.8, 5);
+  const jaw = new THREE.Mesh(jawGeo, mat);
+  jaw.rotation.x = -Math.PI / 2;
+  jaw.position.set(0, -0.1, 0.25);
+  jawPivot.add(jaw);
+  jawPivot.rotation.x = 0.15; // slightly open
+  group.add(jawPivot);
+
+  // --- Teeth: small spikes along upper and lower jaw ---
+  const toothGeo = new THREE.ConeGeometry(0.03, 0.12, 4);
+  const toothMat = new THREE.MeshStandardMaterial({ color: 0xccccaa, roughness: 0.4, metalness: 0.3 });
+  for (let i = 0; i < 6; i++) {
+    const t = (i / 5) * 0.7 + 0.3;
+    const spread = (i % 2 === 0 ? 0.08 : -0.08);
+    // Upper teeth
+    const upper = new THREE.Mesh(toothGeo, toothMat);
+    upper.position.set(spread, -0.2, t * 1.2);
+    upper.rotation.x = Math.PI;
+    group.add(upper);
+    // Lower teeth
+    const lower = new THREE.Mesh(toothGeo, toothMat);
+    lower.position.set(spread, -0.3, t * 1.0);
+    jawPivot.add(lower);
+  }
+
+  // --- Horns: large, curved backward ---
+  const hornGeo = new THREE.ConeGeometry(0.07, 0.7, 6);
+  const hornMat = new THREE.MeshStandardMaterial({ color: 0x222211, roughness: 0.5, metalness: 0.6 });
+  for (let side = -1; side <= 1; side += 2) {
+    // Main horn
+    const horn = new THREE.Mesh(hornGeo, hornMat);
+    horn.position.set(side * 0.3, 0.3, -0.3);
+    horn.rotation.x = Math.PI * 0.7;
+    horn.rotation.z = side * 0.25;
+    group.add(horn);
+
+    // Secondary smaller horn
+    const horn2 = new THREE.Mesh(
+      new THREE.ConeGeometry(0.04, 0.4, 5),
+      hornMat
+    );
+    horn2.position.set(side * 0.2, 0.25, 0.0);
+    horn2.rotation.x = Math.PI * 0.65;
+    horn2.rotation.z = side * 0.15;
+    group.add(horn2);
+  }
+
+  // --- Neck spines/ridges along the top ---
+  const spineGeo = new THREE.ConeGeometry(0.04, 0.2, 4);
+  for (let i = 0; i < 4; i++) {
+    const spine = new THREE.Mesh(spineGeo, mat);
+    spine.position.set(0, 0.3, -0.3 - i * 0.25);
+    spine.rotation.x = Math.PI * 0.85;
+    group.add(spine);
+  }
+
+  // --- Eyes: BRIGHT, menacing, glowing ---
+  const eMat = eyeMaterial();
+  eyeMats.push(eMat);
+  const eGeo = new THREE.SphereGeometry(0.08, 8, 6);
+  for (let side = -1; side <= 1; side += 2) {
+    const eye = new THREE.Mesh(eGeo, eMat);
+    eye.position.set(side * 0.25, 0.15, 0.45);
+    group.add(eye);
+
+    // Strong point light per eye
+    const light = new THREE.PointLight(0xff2200, 1.5, 4);
+    light.position.copy(eye.position);
+    group.add(light);
+  }
+
+  return { group, eyes: eyeMats, jawPivot };
+}
+
+function generateNeckPath(index: number, total: number): THREE.Vector3[] {
+  const spread = ((index - (total - 1) / 2) / ((total - 1) / 2));
+  const angleX = spread * 1.5;
+  const length = 4.0 + Math.abs(spread) * 1.0;
+
+  const pts: THREE.Vector3[] = [];
+  const n = 8;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const x = angleX * t * 1.8;
+    const y = t * length;
+    const z = Math.sin(t * Math.PI) * spread * 0.6;
+    pts.push(new THREE.Vector3(x, y, z));
+  }
+  return pts;
 }
 
 interface NeckData {
   mesh: THREE.Mesh;
   curve: THREE.CatmullRomCurve3;
-  basePoints: THREE.Vector3[];
-  phaseOffset: number;
-  frequency: number;
-  amplitude: number;
-}
-
-function createDragonMaterial(): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
-    color: BODY_COLOR,
-    roughness: 0.7,
-    metalness: 0.4,
-  });
-}
-
-function createHead(material: THREE.MeshStandardMaterial): HeadGroup {
-  const group = new THREE.Group();
-  const eyes: THREE.Mesh[] = [];
-  const eyeLights: THREE.PointLight[] = [];
-
-  // Skull - elongated sphere
-  const skullGeo = new THREE.SphereGeometry(0.35, 12, 8);
-  const skull = new THREE.Mesh(skullGeo, material);
-  skull.scale.set(1, 0.8, 1.5);
-  group.add(skull);
-
-  // Snout - cone pointing forward
-  const snoutGeo = new THREE.ConeGeometry(0.2, 0.6, 8);
-  const snout = new THREE.Mesh(snoutGeo, material);
-  snout.rotation.x = -Math.PI / 2;
-  snout.position.set(0, -0.05, 0.6);
-  group.add(snout);
-
-  // Lower jaw
-  const jawGeo = new THREE.BoxGeometry(0.25, 0.1, 0.4);
-  const jaw = new THREE.Mesh(jawGeo, material);
-  jaw.position.set(0, -0.2, 0.35);
-  group.add(jaw);
-
-  // Horns
-  const hornGeo = new THREE.ConeGeometry(0.06, 0.4, 6);
-  for (let side = -1; side <= 1; side += 2) {
-    const horn = new THREE.Mesh(hornGeo, material);
-    horn.position.set(side * 0.2, 0.2, -0.2);
-    horn.rotation.x = Math.PI * 0.75;
-    horn.rotation.z = side * 0.3;
-    group.add(horn);
-  }
-
-  // Eyes
-  const eyeMat = new THREE.MeshStandardMaterial({
-    color: EYE_COLOR,
-    emissive: EYE_COLOR,
-    emissiveIntensity: 1.5,
-    roughness: 0.3,
-    metalness: 0.0,
-  });
-  const eyeGeo = new THREE.SphereGeometry(0.06, 8, 6);
-  for (let side = -1; side <= 1; side += 2) {
-    const eye = new THREE.Mesh(eyeGeo, eyeMat);
-    eye.position.set(side * 0.18, 0.1, 0.25);
-    group.add(eye);
-    eyes.push(eye);
-
-    // Point light at each eye for glow
-    const light = new THREE.PointLight(EYE_COLOR, 0.3, 2);
-    light.position.copy(eye.position);
-    group.add(light);
-    eyeLights.push(light);
-  }
-
-  return { group, eyes, eyeLights };
-}
-
-function generateNeckPoints(
-  index: number,
-  totalHeads: number
-): THREE.Vector3[] {
-  // Fan the necks outward from center
-  const spread = ((index - (totalHeads - 1) / 2) / ((totalHeads - 1) / 2));
-  const angleX = spread * 1.2;
-  const length = 3.5 + Math.abs(spread) * 0.8;
-
-  const points: THREE.Vector3[] = [];
-  const numPoints = 6;
-  for (let i = 0; i <= numPoints; i++) {
-    const t = i / numPoints;
-    const x = angleX * t * 1.5;
-    const y = t * length;
-    // S-curve sway baked in as base shape
-    const z = Math.sin(t * Math.PI) * spread * 0.5;
-    points.push(new THREE.Vector3(x, y, z));
-  }
-  return points;
+  basePts: THREE.Vector3[];
+  phase: number;
+  freq: number;
+  amp: number;
+  spines: THREE.Mesh[];
 }
 
 export default function HydraScene() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<{
-    renderer: THREE.WebGLRenderer;
-    scene: THREE.Scene;
-    camera: THREE.PerspectiveCamera;
-    necks: NeckData[];
-    heads: HeadGroup[];
-    creatureGroup: THREE.Group;
-    animFrameId: number;
-    disposed: boolean;
-  } | null>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const el = containerRef.current;
+    if (!el) return;
 
-    // --- Scene ---
+    // Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(BG_COLOR);
-    scene.fog = new THREE.Fog(BG_COLOR, 8, 20);
+    scene.background = new THREE.Color(BG);
+    scene.fog = new THREE.FogExp2(BG, 0.06);
 
-    // --- Camera ---
-    const camera = new THREE.PerspectiveCamera(
-      50,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      50
-    );
-    camera.position.set(0, 3, 10);
-    camera.lookAt(0, 2.5, 0);
+    // Camera — closer, looking up at the creature
+    const cam = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 60);
+    cam.position.set(0, 2, 9);
+    cam.lookAt(0, 3.5, 0);
 
-    // --- Renderer ---
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.8;
-    container.appendChild(renderer.domElement);
+    renderer.toneMappingExposure = 0.6;
+    el.appendChild(renderer.domElement);
 
-    // --- Lighting ---
-    const ambientLight = new THREE.AmbientLight(0x222222, 0.5);
-    scene.add(ambientLight);
+    // Lighting — dramatic, cinematic
+    scene.add(new THREE.AmbientLight(0x111111, 0.4));
 
-    const dirLight = new THREE.DirectionalLight(0xffaa66, 1.2);
-    dirLight.position.set(4, 8, 3);
-    scene.add(dirLight);
+    const keyLight = new THREE.DirectionalLight(0xff6633, 1.5);
+    keyLight.position.set(5, 10, 4);
+    scene.add(keyLight);
 
-    // --- Creature group ---
-    const creatureGroup = new THREE.Group();
-    creatureGroup.position.set(0, -1.5, 0);
-    scene.add(creatureGroup);
+    const rimLight = new THREE.DirectionalLight(0x2244ff, 0.6);
+    rimLight.position.set(-5, 6, -4);
+    scene.add(rimLight);
 
-    const material = createDragonMaterial();
+    // A dim red light from below for menace
+    const underLight = new THREE.PointLight(0x660000, 1.0, 15);
+    underLight.position.set(0, -2, 0);
+    scene.add(underLight);
 
-    // --- Body ---
-    const bodyGeo = new THREE.TorusGeometry(1.2, 0.5, 12, 24);
-    const body = new THREE.Mesh(bodyGeo, material);
+    // Creature group
+    const creature = new THREE.Group();
+    creature.position.set(0, -2, 0);
+    scene.add(creature);
+
+    const bodyMat = scaleMaterial();
+
+    // Body — thick, coiled base
+    const bodyGeo = new THREE.TorusGeometry(1.5, 0.7, 12, 24);
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.rotation.x = Math.PI / 2;
-    body.position.set(0, 0.3, 0);
-    creatureGroup.add(body);
+    body.position.y = 0.4;
+    creature.add(body);
 
-    // Extra body bulk
-    const bulkGeo = new THREE.SphereGeometry(1.0, 12, 10);
-    const bulk = new THREE.Mesh(bulkGeo, material);
-    bulk.scale.set(1.3, 0.6, 1.0);
-    bulk.position.set(0, 0.3, 0);
-    creatureGroup.add(bulk);
+    const bulkGeo = new THREE.SphereGeometry(1.4, 12, 10);
+    const bulk = new THREE.Mesh(bulkGeo, bodyMat);
+    bulk.scale.set(1.5, 0.7, 1.2);
+    bulk.position.y = 0.4;
+    creature.add(bulk);
 
-    // --- Necks and Heads ---
-    const necks: NeckData[] = [];
-    const heads: HeadGroup[] = [];
-
-    for (let i = 0; i < NUM_HEADS; i++) {
-      const basePoints = generateNeckPoints(i, NUM_HEADS);
-      const curve = new THREE.CatmullRomCurve3(basePoints, false, "catmullrom", 0.5);
-
-      const tubeGeo = new THREE.TubeGeometry(curve, 20, 0.15, 8, false);
-      const neckMesh = new THREE.Mesh(tubeGeo, material);
-      creatureGroup.add(neckMesh);
-
-      const phaseOffset = (i / NUM_HEADS) * Math.PI * 2;
-      const frequency = 0.4 + Math.random() * 0.3;
-      const amplitude = 0.2 + Math.random() * 0.15;
-
-      necks.push({
-        mesh: neckMesh,
-        curve,
-        basePoints: basePoints.map((p) => p.clone()),
-        phaseOffset,
-        frequency,
-        amplitude,
-      });
-
-      // Head at end of neck
-      const headData = createHead(material);
-      const endPoint = curve.getPointAt(1);
-      const tangent = curve.getTangentAt(1);
-      headData.group.position.copy(endPoint);
-      headData.group.lookAt(
-        endPoint.x + tangent.x,
-        endPoint.y + tangent.y,
-        endPoint.z + tangent.z
-      );
-      creatureGroup.add(headData.group);
-      heads.push(headData);
+    // Body spines
+    const spineGeo = new THREE.ConeGeometry(0.06, 0.35, 4);
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const spine = new THREE.Mesh(spineGeo, bodyMat);
+      spine.position.set(Math.cos(angle) * 1.3, 1.0, Math.sin(angle) * 1.0);
+      spine.rotation.z = Math.cos(angle) * 0.5;
+      spine.rotation.x = Math.sin(angle) * 0.5;
+      creature.add(spine);
     }
 
-    // --- State ref ---
-    const state = {
-      renderer,
-      scene,
-      camera,
-      necks,
-      heads,
-      creatureGroup,
-      animFrameId: 0,
-      disposed: false,
-    };
-    sceneRef.current = state;
+    // Necks + Heads
+    const necks: NeckData[] = [];
+    const heads: HeadData[] = [];
 
-    // --- Animation ---
-    let lastTime = performance.now();
+    for (let i = 0; i < NUM_HEADS; i++) {
+      const basePts = generateNeckPath(i, NUM_HEADS);
+      const curve = new THREE.CatmullRomCurve3(basePts, false, "catmullrom", 0.5);
+
+      // Thicker necks — radius 0.25, tapers
+      const tubeGeo = new THREE.TubeGeometry(curve, 24, 0.25, 10, false);
+      const neckMesh = new THREE.Mesh(tubeGeo, bodyMat);
+      creature.add(neckMesh);
+
+      // Spines along the neck
+      const neckSpines: THREE.Mesh[] = [];
+      for (let s = 0; s < 6; s++) {
+        const t = (s + 1) / 7;
+        const pt = curve.getPointAt(t);
+        const sp = new THREE.Mesh(
+          new THREE.ConeGeometry(0.04, 0.2, 4),
+          bodyMat
+        );
+        sp.position.copy(pt);
+        sp.position.y += 0.25;
+        creature.add(sp);
+        neckSpines.push(sp);
+      }
+
+      const phase = (i / NUM_HEADS) * Math.PI * 2;
+      const freq = 0.35 + Math.random() * 0.25;
+      const amp = 0.25 + Math.random() * 0.2;
+
+      necks.push({ mesh: neckMesh, curve, basePts: basePts.map(p => p.clone()), phase, freq, amp, spines: neckSpines });
+
+      // Dragon head
+      const head = createDragonHead(bodyMat);
+      const end = curve.getPointAt(1);
+      const tan = curve.getTangentAt(1);
+      head.group.position.copy(end);
+      head.group.lookAt(end.x + tan.x, end.y + tan.y, end.z + tan.z);
+      creature.add(head.group);
+      heads.push(head);
+    }
+
+    // Animation
+    let disposed = false;
+    let animId = 0;
 
     function animate(now: number) {
-      if (state.disposed) return;
-      state.animFrameId = requestAnimationFrame(animate);
-
-      const dt = (now - lastTime) / 1000;
-      lastTime = now;
+      if (disposed) return;
+      animId = requestAnimationFrame(animate);
       const t = now / 1000;
 
-      // Slow creature rotation
-      creatureGroup.rotation.y += 0.05 * dt;
+      // Slow rotation
+      creature.rotation.y = Math.sin(t * 0.1) * 0.3;
 
-      // Update each neck
+      // Update necks
       for (let i = 0; i < NUM_HEADS; i++) {
-        const neck = necks[i];
-        const newPoints: THREE.Vector3[] = [];
+        const n = necks[i];
+        const newPts: THREE.Vector3[] = [];
 
-        for (let j = 0; j < neck.basePoints.length; j++) {
-          const base = neck.basePoints[j];
-          const segT = j / (neck.basePoints.length - 1);
-          // More sway toward the tip
-          const swayStrength = segT * segT;
-          const swayX =
-            Math.sin(t * neck.frequency * 2 + neck.phaseOffset + segT * 3) *
-            neck.amplitude *
-            swayStrength;
-          const swayZ =
-            Math.cos(t * neck.frequency * 1.5 + neck.phaseOffset + segT * 2) *
-            neck.amplitude *
-            0.7 *
-            swayStrength;
+        for (let j = 0; j < n.basePts.length; j++) {
+          const base = n.basePts[j];
+          const segT = j / (n.basePts.length - 1);
+          const sway = segT * segT;
 
-          newPoints.push(
-            new THREE.Vector3(base.x + swayX, base.y, base.z + swayZ)
-          );
+          const sx = Math.sin(t * n.freq * 2 + n.phase + segT * 3) * n.amp * sway;
+          const sz = Math.cos(t * n.freq * 1.5 + n.phase + segT * 2.5) * n.amp * 0.8 * sway;
+          // Add some vertical bobbing near the head
+          const sy = Math.sin(t * n.freq + n.phase) * 0.1 * sway;
+
+          newPts.push(new THREE.Vector3(base.x + sx, base.y + sy, base.z + sz));
         }
 
-        // Update curve and rebuild tube
-        neck.curve.points = newPoints;
-
-        const oldGeo = neck.mesh.geometry;
-        const newGeo = new THREE.TubeGeometry(neck.curve, 20, 0.15, 8, false);
-        neck.mesh.geometry = newGeo;
+        n.curve.points = newPts;
+        const oldGeo = n.mesh.geometry;
+        n.mesh.geometry = new THREE.TubeGeometry(n.curve, 24, 0.25, 10, false);
         oldGeo.dispose();
 
-        // Update head position and orientation
-        const head = heads[i];
-        const endPoint = neck.curve.getPointAt(1);
-        const tangent = neck.curve.getTangentAt(1);
-        head.group.position.copy(endPoint);
+        // Update spine positions
+        for (let s = 0; s < n.spines.length; s++) {
+          const st = (s + 1) / 7;
+          const pt = n.curve.getPointAt(st);
+          n.spines[s].position.set(pt.x, pt.y + 0.25, pt.z);
+        }
 
-        const lookTarget = new THREE.Vector3(
-          endPoint.x + tangent.x,
-          endPoint.y + tangent.y,
-          endPoint.z + tangent.z
-        );
-        head.group.lookAt(lookTarget);
+        // Update head
+        const h = heads[i];
+        const end = n.curve.getPointAt(1);
+        const tan = n.curve.getTangentAt(1);
+        h.group.position.copy(end);
+        h.group.lookAt(end.x + tan.x, end.y + tan.y, end.z + tan.z);
 
-        // Head tilt/turn
-        head.group.rotation.y +=
-          Math.sin(t * 0.8 + neck.phaseOffset) * 0.02;
-        head.group.rotation.z +=
-          Math.cos(t * 0.6 + neck.phaseOffset) * 0.015;
+        // Head personality: slight turns and jaw movement
+        h.group.rotation.y += Math.sin(t * 0.7 + n.phase) * 0.03;
+        h.group.rotation.z += Math.cos(t * 0.5 + n.phase) * 0.02;
+        // Jaw open/close slowly
+        h.jawPivot.rotation.x = 0.1 + Math.sin(t * 0.4 + n.phase * 2) * 0.08;
       }
 
       // Eye glow pulse
-      const glowIntensity = 1.2 + Math.sin(t * 3) * 0.4;
-      for (const head of heads) {
-        for (const eye of head.eyes) {
-          const mat = eye.material as THREE.MeshStandardMaterial;
-          mat.emissiveIntensity = glowIntensity;
-        }
-        for (const light of head.eyeLights) {
-          light.intensity = 0.2 + Math.sin(t * 3) * 0.15;
+      const glow = 2.5 + Math.sin(t * 2.5) * 1.0;
+      for (const h of heads) {
+        for (const m of h.eyes) {
+          m.emissiveIntensity = glow;
         }
       }
 
-      renderer.render(scene, camera);
+      renderer.render(scene, cam);
     }
 
-    state.animFrameId = requestAnimationFrame(animate);
+    animId = requestAnimationFrame(animate);
 
-    // --- Resize ---
+    // Resize
     function onResize() {
-      if (state.disposed) return;
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
+      if (disposed) return;
+      cam.aspect = window.innerWidth / window.innerHeight;
+      cam.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
     window.addEventListener("resize", onResize);
 
-    // --- Cleanup ---
     return () => {
-      state.disposed = true;
-      cancelAnimationFrame(state.animFrameId);
+      disposed = true;
+      cancelAnimationFrame(animId);
       window.removeEventListener("resize", onResize);
-
-      // Dispose all geometries and materials
       scene.traverse((obj) => {
         if (obj instanceof THREE.Mesh) {
           obj.geometry.dispose();
-          if (Array.isArray(obj.material)) {
-            obj.material.forEach((m) => m.dispose());
-          } else {
-            obj.material.dispose();
-          }
+          const m = obj.material;
+          if (Array.isArray(m)) m.forEach(x => x.dispose());
+          else m.dispose();
         }
       });
-
       renderer.dispose();
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
-      }
-      sceneRef.current = null;
+      if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };
   }, []);
 
@@ -357,13 +383,11 @@ export default function HydraScene() {
       ref={containerRef}
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
+        top: 0, left: 0,
+        width: "100%", height: "100%",
         zIndex: 0,
         pointerEvents: "none",
-        opacity: 0.4,
+        opacity: 0.6,
       }}
     />
   );

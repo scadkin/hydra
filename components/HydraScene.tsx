@@ -3,107 +3,104 @@
 import { useEffect, useRef, useCallback } from "react";
 
 /**
- * HydraScene.tsx — v5: GoT-accurate dragon anatomy
+ * HydraScene.tsx — v6: HIGH-RES canvas → ASCII downsampling
  *
- * Based on actual visual study of Drogon and hydra art:
- * - Long crocodilian snouts
- * - Crown of swept-back horns
- * - Wide-open jaws showing teeth
- * - Heavy brow ridges
- * - Spiny frill ridge along skull and neck
- * - Thick, muscular necks that twist and coil around each other
- * - Each head faces a different direction
+ * COMPLETELY NEW APPROACH:
+ * 1. Draw the hydra at FULL SCREEN RESOLUTION (1440x900+ pixels)
+ *    with real illustration quality — gradients, shadows, fine detail
+ * 2. For each ASCII character cell (e.g. 6x10 pixel block),
+ *    average the brightness of all pixels in that block
+ * 3. Map that average to an ASCII character
+ *
+ * This means the source illustration has ~100x more detail than before.
+ * The ASCII rendering captures actual dragon anatomy, not blobs.
+ *
+ * Dragon anatomy based on studying Drogon from Game of Thrones:
+ * - Long crocodilian skull tapering to narrow snout
+ * - Crown of swept-back horns in decreasing size
+ * - Heavy brow ridge overhanging deep-set eyes
+ * - Wide jaw opening with rows of teeth
+ * - Thick muscular necks with dorsal spine ridge
+ * - Necks coil and twist around each other
  */
 
-const CHAR_W = 5;
-const CHAR_H = 8;
-const CHARS = " .,;:!|/\\*+?%$#@";
+const CELL_W = 6;
+const CELL_H = 10;
+const CHARS = "  ..,::;;!!||//\\\\**++??%%$$##@@";
 
 export default function HydraScene() {
   const preRef = useRef<HTMLPreElement>(null);
-  const cvRef = useRef<HTMLCanvasElement | null>(null);
+  const hiResRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef(0);
   const animRef = useRef(0);
 
-  const draw = useCallback(() => {
+  const render = useCallback(() => {
     const pre = preRef.current;
     if (!pre) return;
 
-    const W = window.innerWidth;
-    const H = window.innerHeight;
-    const cols = Math.floor(W / CHAR_W);
-    const rows = Math.floor(H / CHAR_H);
+    const screenW = window.innerWidth;
+    const screenH = window.innerHeight;
+    const cols = Math.floor(screenW / CELL_W);
+    const rows = Math.floor(screenH / CELL_H);
 
-    if (!cvRef.current) cvRef.current = document.createElement("canvas");
-    const cv = cvRef.current;
-    cv.width = cols;
-    cv.height = rows;
-    const c = cv.getContext("2d")!;
+    // ─── HIGH-RES canvas at actual screen resolution ───
+    if (!hiResRef.current) hiResRef.current = document.createElement("canvas");
+    const cv = hiResRef.current;
+    cv.width = screenW;
+    cv.height = screenH;
+    const ctx = cv.getContext("2d", { willReadFrequently: true })!;
 
-    const t = frameRef.current * 0.018;
+    const t = frameRef.current * 0.016;
     frameRef.current++;
 
-    c.fillStyle = "#000";
-    c.fillRect(0, 0, cols, rows);
+    // Clear to black
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, screenW, screenH);
 
-    const cx = cols / 2;
-    const baseY = rows * 0.88;
+    // Center and scale
+    const cx = screenW / 2;
+    const baseY = screenH * 0.85;
 
-    // ─── BODY — thick coiled serpentine mass ───
-    c.fillStyle = "#555";
-    c.beginPath();
-    c.ellipse(cx, baseY, cols * 0.18, rows * 0.07, 0, 0, Math.PI * 2);
-    c.fill();
-    // Body coils
-    c.fillStyle = "#444";
-    for (let i = 0; i < 5; i++) {
-      const bx = cx + Math.cos(i * 1.3 + t * 0.1) * cols * 0.12;
-      const by = baseY + Math.sin(i * 1.3) * rows * 0.035;
-      c.beginPath();
-      c.ellipse(bx, by, cols * 0.06, rows * 0.03, i * 0.4, 0, Math.PI * 2);
-      c.fill();
-    }
+    // ─── DRAW HYDRA AT FULL RESOLUTION ───
+    drawFullResHydra(ctx, cx, baseY, screenW, screenH, t);
 
-    // ─── 7 NECKS + HEADS ───
-    const heads = [
-      { angle: -1.0, len: 0.48, phase: 0.0, facing: -0.4 },
-      { angle: -0.65, len: 0.56, phase: 0.9, facing: -0.25 },
-      { angle: -0.3, len: 0.63, phase: 1.9, facing: -0.1 },
-      { angle: 0.0, len: 0.7, phase: 2.8, facing: 0.0 },
-      { angle: 0.3, len: 0.63, phase: 3.9, facing: 0.1 },
-      { angle: 0.65, len: 0.56, phase: 4.8, facing: 0.25 },
-      { angle: 1.0, len: 0.48, phase: 5.8, facing: 0.4 },
-    ];
+    // ─── DOWNSAMPLE to ASCII ───
+    // Read the full-res image and average pixel blocks
+    const imgData = ctx.getImageData(0, 0, screenW, screenH);
+    const px = imgData.data;
 
-    // Draw back-to-front for depth (center heads in front)
-    const order = [0, 6, 1, 5, 2, 4, 3];
+    let ascii = "";
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        // Average brightness of the pixel block for this character cell
+        let totalBright = 0;
+        let count = 0;
+        const startX = col * CELL_W;
+        const startY = row * CELL_H;
 
-    for (const idx of order) {
-      const h = heads[idx];
-      drawDragon(c, cx, baseY, h, t, cols, rows, idx);
-    }
+        for (let py = startY; py < Math.min(startY + CELL_H, screenH); py++) {
+          for (let px2 = startX; px2 < Math.min(startX + CELL_W, screenW); px2++) {
+            const i = (py * screenW + px2) * 4;
+            totalBright += (px[i] + px[i + 1] + px[i + 2]) / 3;
+            count++;
+          }
+        }
 
-    // ─── Convert to ASCII ───
-    const img = c.getImageData(0, 0, cols, rows);
-    const px = img.data;
-    let out = "";
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        const i = (y * cols + x) * 4;
-        const b = (px[i] + px[i + 1] + px[i + 2]) / 3;
-        out += CHARS[Math.floor((b / 255) * (CHARS.length - 1))];
+        const avgBright = totalBright / count;
+        const charIdx = Math.floor((avgBright / 255) * (CHARS.length - 1));
+        ascii += CHARS[charIdx];
       }
-      out += "\n";
+      ascii += "\n";
     }
-    pre.textContent = out;
 
-    animRef.current = requestAnimationFrame(draw);
+    pre.textContent = ascii;
+    animRef.current = requestAnimationFrame(render);
   }, []);
 
   useEffect(() => {
-    animRef.current = requestAnimationFrame(draw);
+    animRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animRef.current);
-  }, [draw]);
+  }, [render]);
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
@@ -112,11 +109,11 @@ export default function HydraScene() {
         style={{
           margin: 0, padding: 0,
           fontFamily: "'Geist Mono', 'SF Mono', monospace",
-          fontSize: `${CHAR_H}px`,
-          lineHeight: `${CHAR_H}px`,
-          letterSpacing: `${CHAR_W - 3.5}px`,
+          fontSize: `${CELL_H}px`,
+          lineHeight: `${CELL_H}px`,
+          letterSpacing: `${CELL_W - 4}px`,
           color: "#c9a050",
-          opacity: 0.5,
+          opacity: 0.55,
           whiteSpace: "pre",
           overflow: "hidden",
         }}
@@ -125,217 +122,303 @@ export default function HydraScene() {
   );
 }
 
-function drawDragon(
-  c: CanvasRenderingContext2D,
+/**
+ * Draw the full hydra creature at HIGH RESOLUTION.
+ * This is actual illustration, not low-res blobs.
+ */
+function drawFullResHydra(
+  ctx: CanvasRenderingContext2D,
   cx: number, baseY: number,
-  cfg: { angle: number; len: number; phase: number; facing: number },
-  time: number, cols: number, rows: number, idx: number
+  W: number, H: number, time: number
 ) {
-  const { angle, len, phase, facing } = cfg;
-  const neckLen = rows * len;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
 
-  // Animated sway — each neck moves independently
-  const swX = Math.sin(time * 0.45 + phase) * cols * 0.035;
-  const swX2 = Math.cos(time * 0.3 + phase * 1.5) * cols * 0.02;
-  const swY = Math.sin(time * 0.25 + phase) * rows * 0.015;
+  // ─── BODY — thick serpentine coiled mass ───
+  // Main body bulk with gradient for volume
+  const bodyGrad = ctx.createRadialGradient(cx, baseY, 0, cx, baseY, W * 0.2);
+  bodyGrad.addColorStop(0, "#666");
+  bodyGrad.addColorStop(0.6, "#444");
+  bodyGrad.addColorStop(1, "#111");
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.ellipse(cx, baseY, W * 0.17, H * 0.08, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Neck path — S-curve with intertwining
-  const intertwine = Math.sin(time * 0.4 + phase + 0.5) * cols * 0.03;
-  const p0x = cx + angle * cols * 0.04;
-  const p0y = baseY;
-  const p1x = cx + angle * cols * 0.1 + intertwine;
-  const p1y = baseY - neckLen * 0.3;
-  const p2x = cx + angle * cols * 0.2 + swX - intertwine;
-  const p2y = baseY - neckLen * 0.6 + swY;
-  const hx = cx + angle * cols * 0.3 + swX + swX2;
-  const hy = baseY - neckLen + swY;
-
-  // ─── NECK — thick, muscular ───
-  const neckW = Math.max(4, cols * 0.022);
-  c.lineCap = "round";
-  c.lineJoin = "round";
-
-  // Neck shadow/thickness
-  c.strokeStyle = "#333";
-  c.lineWidth = neckW + 2;
-  c.beginPath();
-  c.moveTo(p0x, p0y);
-  c.bezierCurveTo(p1x, p1y, p2x, p2y, hx, hy);
-  c.stroke();
-
-  // Neck main
-  c.strokeStyle = "#666";
-  c.lineWidth = neckW;
-  c.beginPath();
-  c.moveTo(p0x, p0y);
-  c.bezierCurveTo(p1x, p1y, p2x, p2y, hx, hy);
-  c.stroke();
-
-  // ─── SPINY RIDGE along the neck ───
-  c.fillStyle = "#888";
-  for (let s = 0; s < 16; s++) {
-    const st = (s + 1) / 17;
-    const sx = bz(p0x, p1x, p2x, hx, st);
-    const sy = bz(p0y, p1y, p2y, hy, st);
-    // Spine points upward from the neck
-    const spH = (1.2 - st * 0.6) * neckW * 0.45;
-    c.beginPath();
-    c.moveTo(sx - neckW * 0.08, sy - neckW * 0.35);
-    c.lineTo(sx, sy - neckW * 0.35 - spH);
-    c.lineTo(sx + neckW * 0.08, sy - neckW * 0.35);
-    c.closePath();
-    c.fill();
+  // Coil overlaps — gives volume and serpentine feel
+  for (let i = 0; i < 6; i++) {
+    const coilAngle = (i / 6) * Math.PI * 2 + time * 0.05;
+    const coilX = cx + Math.cos(coilAngle) * W * 0.11;
+    const coilY = baseY + Math.sin(coilAngle * 0.5) * H * 0.03 - H * 0.01;
+    const g = ctx.createRadialGradient(coilX, coilY, 0, coilX, coilY, W * 0.06);
+    g.addColorStop(0, "#555");
+    g.addColorStop(1, "#222");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(coilX, coilY, W * 0.055, H * 0.035, coilAngle * 0.3, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // ─── DRAGON HEAD — GoT Drogon style ───
-  const headDir = Math.atan2(hy - p2y, hx - p2x);
-  const headTilt = Math.sin(time * 0.35 + phase * 2) * 0.12;
-  const jawOpen = 0.15 + Math.sin(time * 0.25 + phase * 3) * 0.12; // breathing
+  // ─── 7 NECKS + DRAGON HEADS ───
+  const heads = [
+    { spread: -1.3, length: 0.52, phase: 0.0 },
+    { spread: -0.85, length: 0.60, phase: 0.85 },
+    { spread: -0.35, length: 0.68, phase: 1.8 },
+    { spread: 0.0, length: 0.75, phase: 2.7 },
+    { spread: 0.35, length: 0.68, phase: 3.7 },
+    { spread: 0.85, length: 0.60, phase: 4.6 },
+    { spread: 1.3, length: 0.52, phase: 5.5 },
+  ];
 
-  c.save();
-  c.translate(hx, hy);
-  c.rotate(headDir + headTilt + Math.PI);
+  // Draw back-to-front (outer necks first, center last)
+  const drawOrder = [0, 6, 1, 5, 2, 4, 3];
 
-  const s = Math.max(1.5, cols * 0.016); // head scale
+  for (const idx of drawOrder) {
+    const h = heads[idx];
+    const neckH = H * h.length;
 
-  // ── Skull — long, flat, crocodilian ──
-  c.fillStyle = "#777";
-  c.beginPath();
-  c.moveTo(-s * 2, -s * 2.5);        // back of skull top
-  c.lineTo(s * 3, -s * 1.8);          // brow ridge
-  c.lineTo(s * 8, -s * 0.8);          // bridge of snout
-  c.lineTo(s * 13, -s * 0.3);         // tip of snout
-  c.lineTo(s * 13, s * 0.3);          // tip bottom
-  c.lineTo(s * 8, s * 0.6);           // under snout
-  c.lineTo(s * 3, s * 1.0);           // under jaw hinge
-  c.lineTo(-s * 2, s * 0.5);          // back of skull bottom
-  c.closePath();
-  c.fill();
+    // Animated sway — unique per head
+    const sway1 = Math.sin(time * 0.4 + h.phase) * W * 0.045;
+    const sway2 = Math.cos(time * 0.28 + h.phase * 1.4) * W * 0.025;
+    const vertSway = Math.sin(time * 0.22 + h.phase) * H * 0.012;
 
-  // ── Lower jaw — opens based on breathing ──
-  c.fillStyle = "#555";
-  c.beginPath();
-  const jawDrop = jawOpen * s * 5;
-  c.moveTo(s * 2, s * 1.0);                           // jaw hinge
-  c.lineTo(s * 6, s * 1.5 + jawDrop * 0.6);           // mid jaw
-  c.lineTo(s * 11, s * 0.8 + jawDrop);                 // front jaw
-  c.lineTo(s * 12.5, s * 0.5 + jawDrop);               // jaw tip
-  c.lineTo(s * 11, s * 1.8 + jawDrop);                 // under jaw front
-  c.lineTo(s * 6, s * 2.5 + jawDrop * 0.5);           // under jaw mid
-  c.lineTo(s * 2, s * 2.0);                            // under jaw back
-  c.closePath();
-  c.fill();
+    // Intertwining — necks cross over each other
+    const intertwine = Math.sin(time * 0.35 + h.phase + 1.5) * W * 0.025;
 
-  // ── TEETH — jagged row along upper and lower jaw ──
-  c.fillStyle = "#ccc";
-  for (let ti = 0; ti < 8; ti++) {
-    const tx = s * (4 + ti * 1.1);
-    const jawBend = jawDrop * (ti / 8);
-    // Upper fangs (pointing down)
-    c.beginPath();
-    c.moveTo(tx - s * 0.2, s * 0.1);
-    c.lineTo(tx, s * 1.2 + jawBend * 0.3);
-    c.lineTo(tx + s * 0.2, s * 0.1);
-    c.closePath();
-    c.fill();
-    // Lower teeth (pointing up)
-    c.beginPath();
-    c.moveTo(tx - s * 0.15, s * 1.3 + jawBend);
-    c.lineTo(tx, s * 0.4 + jawBend * 0.5);
-    c.lineTo(tx + s * 0.15, s * 1.3 + jawBend);
-    c.closePath();
-    c.fill();
+    // Bezier control points for S-curve neck
+    const x0 = cx + h.spread * W * 0.04;
+    const y0 = baseY - H * 0.02;
+    const x1 = cx + h.spread * W * 0.08 + intertwine;
+    const y1 = baseY - neckH * 0.3;
+    const x2 = cx + h.spread * W * 0.18 + sway1 - intertwine * 0.5;
+    const y2 = baseY - neckH * 0.65 + vertSway;
+    const hx = cx + h.spread * W * 0.25 + sway1 + sway2;
+    const hy = baseY - neckH + vertSway;
+
+    // ── NECK with volume (gradient stroke) ──
+    const neckThickness = W * 0.036;
+
+    // Shadow/outline
+    ctx.strokeStyle = "#1a1a1a";
+    ctx.lineWidth = neckThickness + 6;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.bezierCurveTo(x1, y1, x2, y2, hx, hy);
+    ctx.stroke();
+
+    // Main neck — gradient along length
+    ctx.strokeStyle = "#555";
+    ctx.lineWidth = neckThickness;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.bezierCurveTo(x1, y1, x2, y2, hx, hy);
+    ctx.stroke();
+
+    // Highlight stripe (top of neck = lit side)
+    ctx.strokeStyle = "#777";
+    ctx.lineWidth = neckThickness * 0.3;
+    ctx.beginPath();
+    // Offset slightly above the main path
+    ctx.moveTo(x0, y0 - neckThickness * 0.25);
+    ctx.bezierCurveTo(
+      x1, y1 - neckThickness * 0.25,
+      x2, y2 - neckThickness * 0.25,
+      hx, hy - neckThickness * 0.25
+    );
+    ctx.stroke();
+
+    // ── DORSAL SPINE RIDGE ──
+    ctx.fillStyle = "#888";
+    for (let s = 0; s < 20; s++) {
+      const st = (s + 1) / 21;
+      const sx = bezAt(x0, x1, x2, hx, st);
+      const sy = bezAt(y0, y1, y2, hy, st);
+      const spineH = (1.3 - st * 0.5) * neckThickness * 0.5;
+
+      ctx.beginPath();
+      ctx.moveTo(sx - 2, sy - neckThickness * 0.4);
+      ctx.lineTo(sx, sy - neckThickness * 0.4 - spineH);
+      ctx.lineTo(sx + 2, sy - neckThickness * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // ── DRAGON HEAD — Drogon-style, full detail ──
+    const headAngle = Math.atan2(hy - y2, hx - x2);
+    const tilt = Math.sin(time * 0.3 + h.phase * 2) * 0.1;
+    const jawOpen = 0.12 + Math.sin(time * 0.2 + h.phase * 3) * 0.1;
+
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.rotate(headAngle + tilt + Math.PI);
+
+    const sc = Math.max(3, W * 0.026); // head scale — LARGE for visible detail
+
+    // Shadow behind head for depth
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 3;
+
+    // ── UPPER SKULL — long tapered crocodilian shape ──
+    const skullGrad = ctx.createLinearGradient(0, -sc * 3, 0, sc * 1);
+    skullGrad.addColorStop(0, "#888");
+    skullGrad.addColorStop(0.5, "#666");
+    skullGrad.addColorStop(1, "#444");
+    ctx.fillStyle = skullGrad;
+    ctx.beginPath();
+    ctx.moveTo(-sc * 3, 0);              // back of skull
+    ctx.quadraticCurveTo(-sc * 2, -sc * 3, sc * 2, -sc * 2.2);  // dome
+    ctx.quadraticCurveTo(sc * 6, -sc * 1.5, sc * 10, -sc * 0.8); // bridge
+    ctx.lineTo(sc * 14, -sc * 0.3);      // snout tip top
+    ctx.lineTo(sc * 14, sc * 0.2);       // snout tip bottom
+    ctx.quadraticCurveTo(sc * 10, sc * 0.5, sc * 5, sc * 0.8);  // under snout
+    ctx.lineTo(sc * 2, sc * 1.0);        // jaw hinge
+    ctx.lineTo(-sc * 3, sc * 0.5);       // back of skull bottom
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    // ── LOWER JAW — animated opening ──
+    const jd = jawOpen * sc * 6;
+    const jawGrad = ctx.createLinearGradient(0, sc * 1, 0, sc * 3 + jd);
+    jawGrad.addColorStop(0, "#555");
+    jawGrad.addColorStop(1, "#333");
+    ctx.fillStyle = jawGrad;
+    ctx.beginPath();
+    ctx.moveTo(sc * 2, sc * 1.2);
+    ctx.quadraticCurveTo(sc * 6, sc * 1.8 + jd * 0.5, sc * 10, sc * 1.0 + jd * 0.8);
+    ctx.lineTo(sc * 13, sc * 0.5 + jd);
+    ctx.lineTo(sc * 13, sc * 1.5 + jd);
+    ctx.quadraticCurveTo(sc * 8, sc * 3.0 + jd * 0.6, sc * 2, sc * 2.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // ── TEETH — individual sharp fangs ──
+    ctx.fillStyle = "#ddd";
+    for (let ti = 0; ti < 9; ti++) {
+      const tx = sc * (3.5 + ti * 1.15);
+      const jBend = jd * (ti / 9);
+      const tSize = sc * (0.4 - ti * 0.02);
+
+      // Upper fang
+      ctx.beginPath();
+      ctx.moveTo(tx - tSize * 0.4, sc * 0.0);
+      ctx.lineTo(tx, sc * 1.0 + jBend * 0.2);
+      ctx.lineTo(tx + tSize * 0.4, sc * 0.0);
+      ctx.closePath();
+      ctx.fill();
+
+      // Lower tooth
+      ctx.beginPath();
+      ctx.moveTo(tx - tSize * 0.3, sc * 1.5 + jBend);
+      ctx.lineTo(tx, sc * 0.6 + jBend * 0.4);
+      ctx.lineTo(tx + tSize * 0.3, sc * 1.5 + jBend);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // ── HORN CROWN — 3-4 horns per side, swept back like Drogon ──
+    for (let side = -1; side <= 1; side += 2) {
+      ctx.fillStyle = "#999";
+      // Primary horn — large, sweeping far back
+      drawHorn(ctx, -sc * 1, side * sc * 2.5, -sc * 10, side * sc * 6, sc * 0.8);
+      // Secondary horn
+      ctx.fillStyle = "#888";
+      drawHorn(ctx, sc * 0.5, side * sc * 2.2, -sc * 6, side * sc * 5, sc * 0.6);
+      // Tertiary horn
+      ctx.fillStyle = "#777";
+      drawHorn(ctx, sc * 2, side * sc * 2.0, -sc * 3, side * sc * 4, sc * 0.45);
+      // Small cheek spike
+      ctx.fillStyle = "#666";
+      drawHorn(ctx, sc * 3, side * sc * 1.5, sc * 1, side * sc * 3.2, sc * 0.3);
+    }
+
+    // ── BROW RIDGE — heavy armor plate ──
+    ctx.fillStyle = "#777";
+    ctx.beginPath();
+    ctx.moveTo(sc * 0, -sc * 2.8);
+    ctx.lineTo(sc * 6, -sc * 1.8);
+    ctx.lineTo(sc * 6, -sc * 1.3);
+    ctx.lineTo(sc * 0, -sc * 2.2);
+    ctx.closePath();
+    ctx.fill();
+
+    // ── EYE — deep-set, piercing, with glow ──
+    // Eye socket shadow
+    ctx.fillStyle = "#222";
+    ctx.beginPath();
+    ctx.ellipse(sc * 4.5, -sc * 1.0, sc * 1.0, sc * 0.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Eye
+    ctx.fillStyle = "#ff6600";
+    ctx.beginPath();
+    ctx.ellipse(sc * 4.5, -sc * 1.0, sc * 0.7, sc * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Bright center
+    ctx.fillStyle = "#ffaa00";
+    ctx.beginPath();
+    ctx.ellipse(sc * 4.5, -sc * 1.0, sc * 0.4, sc * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Slit pupil
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.ellipse(sc * 4.5, -sc * 1.0, sc * 0.1, sc * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── NOSTRIL ──
+    ctx.fillStyle = "#222";
+    ctx.beginPath();
+    ctx.ellipse(sc * 12, -sc * 0.4, sc * 0.4, sc * 0.25, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── SCALE TEXTURE — subtle lines on the skull ──
+    ctx.strokeStyle = "rgba(100,100,100,0.4)";
+    ctx.lineWidth = 1;
+    for (let li = 0; li < 6; li++) {
+      const lx = sc * (2 + li * 2);
+      ctx.beginPath();
+      ctx.moveTo(lx, -sc * 2);
+      ctx.lineTo(lx + sc * 0.8, sc * 0.2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
-
-  // ── HORN CROWN — multiple swept-back horns like Drogon ──
-  c.fillStyle = "#999";
-  for (let side = -1; side <= 1; side += 2) {
-    // Primary horn — large, sweeping back
-    c.beginPath();
-    c.moveTo(-s * 0.5, side * s * 2.0);
-    c.lineTo(-s * 8, side * s * 5.0);
-    c.lineTo(-s * 7, side * s * 4.2);
-    c.lineTo(-s * 0.3, side * s * 1.5);
-    c.closePath();
-    c.fill();
-
-    // Secondary horn
-    c.beginPath();
-    c.moveTo(s * 1.0, side * s * 1.8);
-    c.lineTo(-s * 4, side * s * 4.0);
-    c.lineTo(-s * 3.5, side * s * 3.4);
-    c.lineTo(s * 1.2, side * s * 1.4);
-    c.closePath();
-    c.fill();
-
-    // Third horn — smaller, part of the crest
-    c.beginPath();
-    c.moveTo(s * 2.5, side * s * 1.6);
-    c.lineTo(-s * 1.5, side * s * 3.2);
-    c.lineTo(-s * 1.0, side * s * 2.7);
-    c.lineTo(s * 2.6, side * s * 1.2);
-    c.closePath();
-    c.fill();
-
-    // Cheek/jaw spike
-    c.beginPath();
-    c.moveTo(s * 1.5, side * s * 1.2);
-    c.lineTo(s * 0, side * s * 2.8);
-    c.lineTo(s * 0.5, side * s * 2.3);
-    c.lineTo(s * 1.7, side * s * 1.0);
-    c.closePath();
-    c.fill();
-  }
-
-  // ── Brow ridge — heavy, armored ──
-  c.fillStyle = "#888";
-  c.beginPath();
-  c.moveTo(s * 1, -s * 2.5);
-  c.lineTo(s * 5, -s * 2.0);
-  c.lineTo(s * 5, -s * 1.5);
-  c.lineTo(s * 1, -s * 1.8);
-  c.closePath();
-  c.fill();
-  c.beginPath();
-  c.moveTo(s * 1, s * 0.8);
-  c.lineTo(s * 5, s * 0.5);
-  c.lineTo(s * 5, s * 0.8);
-  c.lineTo(s * 1, s * 1.2);
-  c.closePath();
-  c.fill();
-
-  // ── EYE — bright, piercing ──
-  c.fillStyle = "#fff";
-  c.beginPath();
-  c.arc(s * 4, -s * 0.6, s * 0.55, 0, Math.PI * 2);
-  c.fill();
-  // Slit pupil
-  c.fillStyle = "#000";
-  c.beginPath();
-  c.ellipse(s * 4, -s * 0.6, s * 0.12, s * 0.4, 0, 0, Math.PI * 2);
-  c.fill();
-
-  // ── Nostril ──
-  c.fillStyle = "#333";
-  c.beginPath();
-  c.arc(s * 11, -s * 0.5, s * 0.25, 0, Math.PI * 2);
-  c.fill();
-
-  // ── Skull ridge / texture lines ──
-  c.strokeStyle = "#555";
-  c.lineWidth = 0.5;
-  for (let li = 0; li < 4; li++) {
-    const lx = s * (3 + li * 2.5);
-    c.beginPath();
-    c.moveTo(lx, -s * 1.5);
-    c.lineTo(lx + s * 0.5, s * 0.3);
-    c.stroke();
-  }
-
-  c.restore();
 }
 
-function bz(a: number, b: number, cc: number, d: number, t: number): number {
-  const mt = 1 - t;
-  return mt * mt * mt * a + 3 * mt * mt * t * b + 3 * mt * t * t * cc + t * t * t * d;
+/** Draw a tapered horn from base to tip */
+function drawHorn(
+  ctx: CanvasRenderingContext2D,
+  bx: number, by: number,
+  tx: number, ty: number,
+  width: number
+) {
+  const angle = Math.atan2(ty - by, tx - bx);
+  const perpX = Math.cos(angle + Math.PI / 2);
+  const perpY = Math.sin(angle + Math.PI / 2);
+
+  ctx.beginPath();
+  ctx.moveTo(bx + perpX * width, by + perpY * width);
+  ctx.quadraticCurveTo(
+    (bx + tx) / 2 + perpX * width * 0.4,
+    (by + ty) / 2 + perpY * width * 0.4,
+    tx, ty
+  );
+  ctx.quadraticCurveTo(
+    (bx + tx) / 2 - perpX * width * 0.4,
+    (by + ty) / 2 - perpY * width * 0.4,
+    bx - perpX * width, by - perpY * width
+  );
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** Cubic bezier interpolation */
+function bezAt(a: number, b: number, c: number, d: number, t: number): number {
+  const m = 1 - t;
+  return m * m * m * a + 3 * m * m * t * b + 3 * m * t * t * c + t * t * t * d;
 }

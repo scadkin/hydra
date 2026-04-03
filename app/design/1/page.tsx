@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import HydraAscii from "../../../components/HydraAscii";
+import HydraScene from "../../../components/HydraScene";
 
 /**
  * DESIGN 1: "The Arena"
@@ -240,7 +240,7 @@ export default function Design1() {
       className="min-h-screen flex flex-col"
       style={{ background: "#080808", color: "#ccc" }}
     >
-      <HydraAscii />
+      <HydraScene />
 
       {/* Nav bar */}
       <nav
@@ -266,13 +266,13 @@ export default function Design1() {
             href="/design/2"
             className="text-[#444] hover:text-[#8b2020] transition-colors"
           >
-            Lab
+            Sanctum
           </a>
           <a
             href="/design/3"
             className="text-[#444] hover:text-[#8b2020] transition-colors"
           >
-            Forge
+            Nexus
           </a>
         </div>
       </nav>

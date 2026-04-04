@@ -127,4 +127,31 @@ After any UI change, use Puppeteer to screenshot localhost:3000, compare to refe
 - API keys are stored in `.env.local` (never committed to git).
 - All LLM calls happen server-side (in API routes) to protect API keys.
 - Responses are streamed so the user sees text appear in real-time, not after a long wait.
-- The UI is a simple grid: one text input at the top, response panels below.
+- ASCII Hydra background: load REAL dragon artwork → remove background → convert to ASCII → animate with wave distortion. NEVER try to draw dragons with code shapes.
+- 4 design variants exist: main page, Arena (crimson), Sanctum (gold/blue), Nexus (cyan/cyberpunk). Each has its own hydra variant.
+- Output display formats: Editorial cards (Design C), Bento grid, Columns, Stacks — all built, user likes all 4, wants a toggle.
+- YouTube transcripts: MCP server `youtube-transcript` installed + `yt-dlp` available as fallback.
+
+## Current State (updated Session 1)
+
+### What's working:
+- Next.js scaffold with all dependencies (Anthropic SDK, Google AI, OpenAI, Motion, react-markdown, Three.js)
+- All 7 provider modules (Claude, Gemini, Grok, DeepSeek, 3x OpenRouter) with SSE streaming API route
+- 4 page designs: main (`/`), Arena (`/design/1`), Sanctum (`/design/2`), Nexus (`/design/3`)
+- 4 card/output components: Editorial (CardDesignC), Terminal (CardDesignA), Gradient Glass (CardDesignB), Stacks (accordion)
+- ASCII Hydra backgrounds on all 4 pages using real artwork → ASCII conversion with independent head wave distortion
+- Mock streaming works on all pages
+- GitHub repo live at https://github.com/scadkin/hydra
+- Puppeteer installed for screenshot comparison workflow
+- Permissive allowlist configured in `.claude/settings.local.json`
+
+### What needs work:
+- **Hydra animation**: Wave distortion approach is better than chunk-moving but heads still don't move convincingly enough. User wants heads/necks to move like real dragons, not just rippling ASCII. May need a fundamentally different animation approach (pre-rendered frames like Ghostty, or actual 3D model with ASCII post-processing).
+- **Hydra isolation**: Background removal via thresholding works but is imprecise — some background bleeds through, some creature detail gets stripped.
+- **Design polish**: All 4 designs need continued refinement. User wants "award-winning, eye-catching, dramatic" — not minimalist.
+- **Output format toggle**: User wants to toggle between the 4 output display formats (cards, bento, columns, stacks) on any design.
+- **Real API integration**: All pages still use mock streaming data. Need to wire up to actual `/api/query` endpoint with real API keys.
+- **2 new design variants**: User asked for 2 more completely different designs (old Lab/Forge were scrapped, replaced with Sanctum/Nexus). May want more.
+
+### Exact next step:
+Continue iterating the Hydra ASCII art animation (make heads/necks move more realistically), then wire up real LLM API integration (Task 5), then continue design polish.

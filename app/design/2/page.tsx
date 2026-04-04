@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import HydraScene from "../../../components/HydraScene";
+import HydraSanctum from "../../../components/hydra/HydraSanctum";
 
 /**
  * DESIGN 2: "The Sanctum"
@@ -315,7 +315,7 @@ export default function Design2() {
       className="min-h-screen flex flex-col"
       style={{ background: "#0a0e1a", color: "#c0c0d0" }}
     >
-      <HydraScene />
+      <HydraSanctum />
 
       {/* Nav bar — minimal, ethereal */}
       <nav

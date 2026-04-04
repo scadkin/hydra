@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import HydraScene from "../../../components/HydraScene";
+import HydraNexus from "../../../components/hydra/HydraNexus";
 
 /**
  * DESIGN 3: "The Nexus"
@@ -288,7 +288,7 @@ export default function Design3() {
       className="h-screen flex flex-col overflow-hidden"
       style={{ background: "#050505", color: "#eee" }}
     >
-      <HydraScene />
+      <HydraNexus />
 
       {/* === BAND 1: Top nav bar (60px) === */}
       <nav

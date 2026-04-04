@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import HydraScene from "../../../components/HydraScene";
+import HydraArena from "../../../components/hydra/HydraArena";
 
 /**
  * DESIGN 1: "The Arena"
@@ -240,7 +240,7 @@ export default function Design1() {
       className="min-h-screen flex flex-col"
       style={{ background: "#080808", color: "#ccc" }}
     >
-      <HydraScene />
+      <HydraArena />
 
       {/* Nav bar */}
       <nav

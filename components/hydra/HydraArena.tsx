@@ -3,30 +3,24 @@
 import AsciiRenderer from "./AsciiRenderer";
 
 /**
- * HydraArena — For "The Arena" design.
- * Uses the dark purple/teal glowing hydra (variant-1).
- * Aggressive, menacing, with wide head sway.
+ * HydraArena — Dark purple glowing hydra, crimson.
+ * Lower threshold to show MORE of the creature. Aggressive movement.
  */
 export default function HydraArena() {
   return (
     <AsciiRenderer
       src="/hydra-variant-1.jpg"
-      color="#aa3333"
+      color="#cc4444"
       bgMode="dark"
-      threshold={65}
-      opacity={0.45}
-      contrast={1.6}
+      threshold={50}
+      opacity={0.55}
+      contrast={1.8}
       headRegions={[
-        // Left head
-        { x: 0.0, y: 0.05, w: 0.22, h: 0.45, swayAmountX: 0.02, swayAmountY: 0.015, swaySpeed: 0.5, phase: 0 },
-        // Center-left head
-        { x: 0.2, y: 0.0, w: 0.2, h: 0.4, swayAmountX: 0.012, swayAmountY: 0.018, swaySpeed: 0.4, phase: 1.5 },
-        // Center head (top)
-        { x: 0.35, y: 0.0, w: 0.3, h: 0.4, swayAmountX: 0.008, swayAmountY: 0.012, swaySpeed: 0.35, phase: 3.0 },
-        // Center-right head
-        { x: 0.6, y: 0.0, w: 0.2, h: 0.4, swayAmountX: 0.012, swayAmountY: 0.018, swaySpeed: 0.45, phase: 4.2 },
-        // Right head
-        { x: 0.78, y: 0.05, w: 0.22, h: 0.45, swayAmountX: 0.02, swayAmountY: 0.015, swaySpeed: 0.48, phase: 5.5 },
+        { x: 0.0, y: 0.0, w: 0.25, h: 0.5, swayAmountX: 0.05, swayAmountY: 0.04, swaySpeed: 0.55, phase: 0 },
+        { x: 0.18, y: 0.0, w: 0.22, h: 0.45, swayAmountX: 0.035, swayAmountY: 0.04, swaySpeed: 0.45, phase: 1.3 },
+        { x: 0.32, y: 0.0, w: 0.35, h: 0.45, swayAmountX: 0.02, swayAmountY: 0.03, swaySpeed: 0.38, phase: 2.6 },
+        { x: 0.6, y: 0.0, w: 0.22, h: 0.45, swayAmountX: 0.035, swayAmountY: 0.04, swaySpeed: 0.5, phase: 3.9 },
+        { x: 0.77, y: 0.0, w: 0.23, h: 0.5, swayAmountX: 0.05, swayAmountY: 0.04, swaySpeed: 0.53, phase: 5.2 },
       ]}
     />
   );

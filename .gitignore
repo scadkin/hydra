@@ -20,6 +20,9 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# Claude Code local settings (personal, not shared)
+.claude/settings.local.json
+
 # IDE / editor files
 .vscode/
 .idea/

@@ -1,12 +1,15 @@
 /**
  * GET /api/providers
  *
- * Returns the list of all configured providers (id, name, color, model).
- * This does NOT reveal which providers are enabled — that stays server-side.
+ * Returns the list of active providers (those with API keys set).
+ * Only these providers will respond to queries.
  */
 
-import { getAllProviders } from "@/lib/providers";
+import { getActiveProviders } from "@/lib/providers";
 
 export async function GET() {
-  return Response.json(getAllProviders());
+  const active = getActiveProviders();
+  return Response.json(
+    active.map(({ id, name, color, model }) => ({ id, name, color, model }))
+  );
 }

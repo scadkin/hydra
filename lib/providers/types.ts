@@ -12,7 +12,11 @@ export interface ProviderInfo {
   model: string; // Model ID sent to the API
 }
 
+export interface StreamOptions {
+  systemMessage?: string; // RAG context injected as a system message
+}
+
 export interface Provider extends ProviderInfo {
   enabled: boolean; // true when the required API key is set in the environment
-  stream: (prompt: string) => AsyncGenerator<string, void, unknown>;
+  stream: (prompt: string, options?: StreamOptions) => AsyncGenerator<string, void, unknown>;
 }

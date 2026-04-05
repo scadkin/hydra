@@ -8,7 +8,7 @@
 
 import { Provider, ProviderInfo } from "./types";
 import { createClaudeProvider } from "./claude";
-import { createGeminiProvider } from "./gemini";
+import { createGoogleAIProvider } from "./google-ai";
 import { createOpenAIProvider } from "./openai-compatible";
 
 // ---------------------------------------------------------------------------
@@ -19,51 +19,37 @@ function buildProviders(): Provider[] {
   return [
     // Native SDK providers
     createClaudeProvider(),
-    createGeminiProvider(),
-
-    // OpenAI-compatible providers (direct APIs)
-    createOpenAIProvider({
-      id: "grok",
-      name: "Grok",
-      model: "grok-3",
-      color: "#1d9bf0",
-      apiKey: process.env.XAI_API_KEY ?? "",
-      baseURL: "https://api.x.ai/v1",
+    createGoogleAIProvider({
+      id: "gemini",
+      name: "Gemini",
+      model: "gemini-2.5-flash",
+      color: "#4285f4",
     }),
-    createOpenAIProvider({
-      id: "deepseek",
-      name: "DeepSeek",
-      model: "deepseek-chat",
-      color: "#4f6df5",
-      apiKey: process.env.DEEPSEEK_API_KEY ?? "",
-      baseURL: "https://api.deepseek.com",
+    createGoogleAIProvider({
+      id: "gemma",
+      name: "Gemma 3",
+      model: "gemma-3-27b-it",
+      color: "#4ecdc4",
     }),
 
-    // OpenRouter providers (free-tier models)
+    // Groq providers (free tier, fast inference, OpenAI-compatible)
     createOpenAIProvider({
-      id: "openrouter-llama",
-      name: "Llama",
-      model: "meta-llama/llama-4-maverick:free",
+      id: "groq-llama",
+      name: "Llama 3.3",
+      model: "llama-3.3-70b-versatile",
       color: "#764abc",
-      apiKey: process.env.OPENROUTER_API_KEY ?? "",
-      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: process.env.GROQ_API_KEY ?? "",
+      baseURL: "https://api.groq.com/openai/v1",
     }),
     createOpenAIProvider({
-      id: "openrouter-qwen",
-      name: "Qwen",
-      model: "qwen/qwen3-235b:free",
+      id: "groq-qwen",
+      name: "Qwen 3",
+      model: "qwen/qwen3-32b",
       color: "#06b6d4",
-      apiKey: process.env.OPENROUTER_API_KEY ?? "",
-      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: process.env.GROQ_API_KEY ?? "",
+      baseURL: "https://api.groq.com/openai/v1",
     }),
-    createOpenAIProvider({
-      id: "openrouter-deepseek-r1",
-      name: "DeepSeek R1",
-      model: "deepseek/deepseek-r1:free",
-      color: "#10b981",
-      apiKey: process.env.OPENROUTER_API_KEY ?? "",
-      baseURL: "https://openrouter.ai/api/v1",
-    }),
+
   ];
 }
 

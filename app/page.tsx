@@ -1,103 +1,71 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import HydraScene from "../components/HydraScene";
 import Header from "../components/Header";
 import QueryInput from "../components/QueryInput";
 import ResponseGrid from "../components/ResponseGrid";
 import CardDesignC from "../components/cards/CardDesignC";
+import SourcesPanel from "../components/SourcesPanel";
+import ActionBar from "../components/ActionBar";
+import { useStreamQuery } from "../lib/useStreamQuery";
 
 /**
- * page.tsx — Main page with animated ASCII Hydra background + Design C cards.
+ * page.tsx — Main page with RAG-augmented multi-LLM comparison.
  */
 
-interface ProviderResponse {
-  id: string;
-  name: string;
-  color: string;
-  text: string;
-  status: "idle" | "streaming" | "done" | "error";
-  error?: string;
-}
-
-const MOCK_PROVIDERS = [
-  { id: "claude", name: "Claude", color: "#d4a574" },
-  { id: "gemini", name: "Gemini", color: "#7a9ec2" },
-  { id: "grok", name: "Grok", color: "#89b4c8" },
-  { id: "deepseek", name: "DeepSeek", color: "#8888b8" },
-  { id: "openrouter-llama", name: "Llama", color: "#a888a8" },
-  { id: "openrouter-qwen", name: "Qwen", color: "#7ab0a0" },
-  { id: "openrouter-deepseek-r1", name: "DeepSeek R1", color: "#88b088" },
-];
-
-const MOCK_CHUNKS = [
-  "That's a great question. ", "Let me think through this carefully.\n\n",
-  "The short answer is that it depends on context, ",
-  "but here's how I'd break it down:\n\n",
-  "First, consider what you're optimizing for. ",
-  "If speed matters most, you'd want to ",
-  "minimize round trips and batch operations. ",
-  "If correctness is the priority, ",
-  "then a more methodical approach works better.\n\n",
-  "Here's a practical framework:\n\n",
-  "1. Start with the simplest version that could work\n",
-  "2. Measure actual performance, not guesses\n",
-  "3. Optimize only the bottlenecks you find\n",
-  "4. Keep the code readable throughout\n\n",
-  "The trap most people fall into is premature optimization. ",
-  "Profile first, then decide.\n\n",
-  "Want me to go deeper on any of these points?",
-];
-
 export default function Home() {
-  const [responses, setResponses] = useState<ProviderResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
+  const {
+    providers,
+    responses,
+    sources,
+    isLoading,
+    searchingWeb,
+    webSearch,
+    setWebSearch,
+    selectedProviders,
+    toggleProvider,
+    submit,
+  } = useStreamQuery();
 
-  const handleSubmit = useCallback((_prompt: string) => {
-    intervalsRef.current.forEach(clearInterval);
-    intervalsRef.current = [];
-    setIsLoading(true);
+  const [lastPrompt, setLastPrompt] = useState("");
+  const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
 
-    const initial: ProviderResponse[] = MOCK_PROVIDERS.map((p) => ({
-      ...p, text: "", status: "streaming" as const,
-    }));
-    setResponses(initial);
-
-    MOCK_PROVIDERS.forEach((provider, index) => {
-      let ci = 0;
-      const offset = Math.floor(Math.random() * 6);
-      const dur = 2500 + Math.random() * 3500;
-      const start = Date.now();
-      const willError = index === 4;
-      const ms = 60 + Math.random() * 120;
-
-      const id = setInterval(() => {
-        const elapsed = Date.now() - start;
-        if (willError && elapsed > 1200) {
-          clearInterval(id);
-          setResponses(p => p.map(r => r.id === provider.id ? { ...r, status: "error" as const, error: "Request timed out" } : r));
-          checkDone(); return;
+  // Initialize selectedCards when responses arrive
+  useEffect(() => {
+    const doneIds = responses.filter((r) => r.status === "done").map((r) => r.id);
+    if (doneIds.length > 0) {
+      setSelectedCards((prev) => {
+        // Only initialize if we have new done responses not yet in the set
+        const newSet = new Set(prev);
+        for (const id of doneIds) {
+          if (!prev.has(id)) newSet.add(id);
         }
-        if (elapsed >= dur) {
-          clearInterval(id);
-          setResponses(p => p.map(r => r.id === provider.id ? { ...r, status: "done" as const } : r));
-          checkDone(); return;
-        }
-        const chunk = MOCK_CHUNKS[(offset + ci) % MOCK_CHUNKS.length];
-        ci++;
-        setResponses(p => p.map(r => r.id === provider.id ? { ...r, text: r.text + chunk } : r));
-      }, ms);
-      intervalsRef.current.push(id);
-    });
-
-    function checkDone() {
-      setResponses(p => {
-        if (p.every(r => r.status === "done" || r.status === "error")) setIsLoading(false);
-        return p;
+        return newSet;
       });
     }
+  }, [responses]);
+
+  const handleSubmit = useCallback(
+    (prompt: string) => {
+      setLastPrompt(prompt);
+      setSelectedCards(new Set());
+      submit(prompt);
+    },
+    [submit]
+  );
+
+  const toggleCard = useCallback((id: string) => {
+    setSelectedCards((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }, []);
+
+  const doneResponses = responses.filter((r) => r.status === "done");
+  const allSelected = doneResponses.length > 0 && doneResponses.every((r) => selectedCards.has(r.id));
 
   return (
     <>
@@ -106,9 +74,34 @@ export default function Home() {
         <Header />
 
         <div className="max-w-2xl mx-auto">
-          <QueryInput onSubmit={handleSubmit} isLoading={isLoading} />
+          <QueryInput
+            onSubmit={handleSubmit}
+            isLoading={isLoading}
+            providers={providers}
+            selectedProviders={selectedProviders}
+            onToggleProvider={toggleProvider}
+            webSearch={webSearch}
+            onWebSearchChange={setWebSearch}
+            searchingWeb={searchingWeb}
+          />
         </div>
 
+        {/* Search sources */}
+        {sources.length > 0 && <SourcesPanel sources={sources} />}
+
+        {/* Action bar — copy, select all */}
+        {doneResponses.length > 0 && (
+          <ActionBar
+            prompt={lastPrompt}
+            responses={responses}
+            selectedCards={selectedCards}
+            onSelectAll={() => setSelectedCards(new Set(doneResponses.map((r) => r.id)))}
+            onDeselectAll={() => setSelectedCards(new Set())}
+            allSelected={allSelected}
+          />
+        )}
+
+        {/* Response cards */}
         {responses.length > 0 && (
           <ResponseGrid>
             {responses.map((r) => (
@@ -119,6 +112,9 @@ export default function Home() {
                 text={r.text}
                 status={r.status}
                 error={r.error}
+                cutoff={r.cutoff}
+                isSelected={selectedCards.has(r.id)}
+                onToggleSelect={() => toggleCard(r.id)}
               />
             ))}
           </ResponseGrid>

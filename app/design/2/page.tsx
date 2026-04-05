@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import HydraSanctum from "../../../components/hydra/HydraSanctum";
+import { useStreamQuery, ProviderResponse } from "../../../lib/useStreamQuery";
 
 /**
  * DESIGN 2: "The Sanctum"
@@ -16,42 +17,7 @@ import HydraSanctum from "../../../components/hydra/HydraSanctum";
  * letter-spacing. Ancient Greek temple at night.
  */
 
-interface Response {
-  id: string;
-  name: string;
-  color: string;
-  text: string;
-  status: "idle" | "streaming" | "done" | "error";
-  error?: string;
-}
-
-const PROVIDERS = [
-  { id: "claude", name: "Claude", color: "#d4a574" },
-  { id: "gemini", name: "Gemini", color: "#7a9ec2" },
-  { id: "grok", name: "Grok", color: "#89b4c8" },
-  { id: "deepseek", name: "DeepSeek", color: "#8888b8" },
-  { id: "llama", name: "Llama", color: "#a888a8" },
-  { id: "qwen", name: "Qwen", color: "#7ab0a0" },
-  { id: "deepseek-r1", name: "DeepSeek R1", color: "#88b088" },
-];
-
-const CHUNKS = [
-  "That's a great question. ",
-  "Let me think through this carefully.\n\n",
-  "The short answer depends on context, ",
-  "but here's how I'd break it down:\n\n",
-  "First, consider what you're optimizing for. ",
-  "If speed matters most, minimize round trips. ",
-  "If correctness is the priority, ",
-  "be more methodical.\n\n",
-  "Here's a practical framework:\n\n",
-  "1. Start simple\n",
-  "2. Measure, don't guess\n",
-  "3. Optimize bottlenecks only\n",
-  "4. Keep code readable\n\n",
-  "Profile first, then decide.\n\n",
-  "Want me to go deeper?",
-];
+type Response = ProviderResponse;
 
 /* Oracle dot positioned around the summoning circle */
 function OracleDot({
@@ -239,76 +205,14 @@ function ScrollStrip({ r, index }: { r: Response; index: number }) {
 }
 
 export default function Design2() {
-  const [responses, setResponses] = useState<Response[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { providers, responses, isLoading, submit } = useStreamQuery();
   const [query, setQuery] = useState("");
-  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
 
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!query.trim() || isLoading) return;
-      intervalsRef.current.forEach(clearInterval);
-      intervalsRef.current = [];
-      setIsLoading(true);
-
-      setResponses(
-        PROVIDERS.map((p) => ({ ...p, text: "", status: "streaming" }))
-      );
-
-      PROVIDERS.forEach((prov, idx) => {
-        let ci = 0;
-        const off = Math.floor(Math.random() * 5);
-        const dur = 2000 + Math.random() * 4000;
-        const start = Date.now();
-        const err = idx === 4;
-        const ms = 50 + Math.random() * 100;
-        const id = setInterval(() => {
-          const el = Date.now() - start;
-          if (err && el > 1000) {
-            clearInterval(id);
-            setResponses((p) =>
-              p.map((r) =>
-                r.id === prov.id
-                  ? { ...r, status: "error", error: "Request timed out" }
-                  : r
-              )
-            );
-            check();
-            return;
-          }
-          if (el >= dur) {
-            clearInterval(id);
-            setResponses((p) =>
-              p.map((r) =>
-                r.id === prov.id ? { ...r, status: "done" } : r
-              )
-            );
-            check();
-            return;
-          }
-          setResponses((p) =>
-            p.map((r) =>
-              r.id === prov.id
-                ? { ...r, text: r.text + CHUNKS[(off + ci) % CHUNKS.length] }
-                : r
-            )
-          );
-          ci++;
-        }, ms);
-        intervalsRef.current.push(id);
-      });
-
-      function check() {
-        setResponses((p) => {
-          if (p.every((r) => r.status === "done" || r.status === "error"))
-            setIsLoading(false);
-          return p;
-        });
-      }
-    },
-    [query, isLoading]
-  );
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim() || isLoading) return;
+    submit(query);
+  };
 
   return (
     <div
@@ -371,14 +275,14 @@ export default function Design2() {
         {/* Circle container */}
         <div className="relative" style={{ width: 420, height: 420 }}>
           {/* Oracle dots */}
-          {PROVIDERS.map((prov, i) => {
+          {providers.map((prov, i) => {
             const resp = responses.find((r) => r.id === prov.id);
             return (
               <OracleDot
                 key={prov.id}
                 provider={prov}
                 index={i}
-                total={PROVIDERS.length}
+                total={providers.length}
                 status={resp?.status ?? "idle"}
               />
             );

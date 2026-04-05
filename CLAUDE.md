@@ -4,23 +4,23 @@
 
 Hydra is a web app that lets you type one search query and sends it to multiple LLMs at the same time, displaying all responses side by side. Think of it as a "compare all" tool for AI models.
 
-## Supported LLMs
+## Supported LLMs (updated Session 2)
 
-Hydra connects to LLMs through a mix of direct APIs and OpenRouter:
+5 active providers, all free except Claude (covered by Max account):
 
 ### Direct API connections:
-- **Claude** (Anthropic) — via Anthropic API. Covered by the user's Max account.
-- **Gemini** (Google) — via Google AI Studio free tier. Rate limits: 10 RPM, 250 requests/day.
-- **Grok** (xAI) — via xAI API. $25 free credits on signup.
-- **DeepSeek** — via DeepSeek API. Free tokens on signup, then very cheap.
+- **Claude** (Anthropic) — Sonnet 4, via Anthropic SDK. Cutoff: ~Feb 2025.
+- **Gemini** (Google) — 2.5 Flash, via Google AI SDK. Free tier. Cutoff: ~Sep 2024.
+- **Gemma 3** (Google) — 27B, via Google AI SDK (same key as Gemini). Free tier. Cutoff: ~Aug 2024.
 
-### Via OpenRouter (free models, $0/token):
-- **Llama 4 Maverick** (Meta)
-- **Qwen3-235B** (Alibaba)
-- **DeepSeek R1** (reasoning variant)
-- And any other free models on OpenRouter
+### Via Groq (free tier, fast inference):
+- **Llama 3.3** (Meta) — 70B via Groq. Free forever. Cutoff: ~Dec 2023.
+- **Qwen 3** (Alibaba) — 32B via Groq. Free forever. Cutoff: ~Jul 2024.
 
-OpenRouter rate limits on free tier: ~20 req/min, ~200 req/day.
+### Disabled (no free credits):
+- Grok (xAI) — no free credits available
+- DeepSeek — insufficient balance
+- OpenRouter — rate limits too aggressive on free tier
 
 ## Tech Stack
 
@@ -132,26 +132,31 @@ After any UI change, use Puppeteer to screenshot localhost:3000, compare to refe
 - Output display formats: Editorial cards (Design C), Bento grid, Columns, Stacks — all built, user likes all 4, wants a toggle.
 - YouTube transcripts: MCP server `youtube-transcript` installed + `yt-dlp` available as fallback.
 
-## Current State (updated Session 1)
+## Current State (updated Session 2)
 
 ### What's working:
-- Next.js scaffold with all dependencies (Anthropic SDK, Google AI, OpenAI, Motion, react-markdown, Three.js)
-- All 7 provider modules (Claude, Gemini, Grok, DeepSeek, 3x OpenRouter) with SSE streaming API route
-- 4 page designs: main (`/`), Arena (`/design/1`), Sanctum (`/design/2`), Nexus (`/design/3`)
-- 4 card/output components: Editorial (CardDesignC), Terminal (CardDesignA), Gradient Glass (CardDesignB), Stacks (accordion)
-- ASCII Hydra backgrounds on all 4 pages using real artwork → ASCII conversion with independent head wave distortion
-- Mock streaming works on all pages
-- GitHub repo live at https://github.com/scadkin/hydra
-- Puppeteer installed for screenshot comparison workflow
-- Permissive allowlist configured in `.claude/settings.local.json`
+- **Real LLM API integration**: All 5 providers streaming real responses via SSE (no more mock data)
+- **Full RAG pipeline**: Query classification (regex + LLM) → query rewriting → multi-source search (Jina + Google News RSS + HackerNews) → Jina Reranker → smart snippet extraction → dynamic prompt building
+- **Web search toggle**: Users can enable/disable web search augmentation per query
+- **LLM toggle**: Clickable model pills to select/deselect which models to query
+- **Sources panel**: Horizontal scrollable strip showing search sources with trust tiers, freshness tags, domain info
+- **Knowledge cutoff display**: Verified cutoff dates shown on every response card
+- **Copy features**: Per-card copy (hover action), Copy All/Selected (action bar), selection checkboxes
+- **Hover effects**: Cards glow + scale on hover, reveal copy/expand action icons
+- **Usage tracker**: `/usage` page tracking requests, tokens, costs per provider
+- **Dynamic RAG prompting**: Prompt framing adapts based on relevance score (high/moderate/low)
+- All API keys configured in `.env.local` (Claude, Gemini/Gemma, Groq, Jina, OpenRouter disabled)
+- 4 page designs still working: main (`/`), Arena, Sanctum, Nexus
 
 ### What needs work:
-- **Hydra animation**: Wave distortion approach is better than chunk-moving but heads still don't move convincingly enough. User wants heads/necks to move like real dragons, not just rippling ASCII. May need a fundamentally different animation approach (pre-rendered frames like Ghostty, or actual 3D model with ASCII post-processing).
-- **Hydra isolation**: Background removal via thresholding works but is imprecise — some background bleeds through, some creature detail gets stripped.
-- **Design polish**: All 4 designs need continued refinement. User wants "award-winning, eye-catching, dramatic" — not minimalist.
-- **Output format toggle**: User wants to toggle between the 4 output display formats (cards, bento, columns, stacks) on any design.
-- **Real API integration**: All pages still use mock streaming data. Need to wire up to actual `/api/query` endpoint with real API keys.
-- **2 new design variants**: User asked for 2 more completely different designs (old Lab/Forge were scrapped, replaced with Sanctum/Nexus). May want more.
+- **RAG response quality**: Dynamic relevance framing helps but models still over-anchor on tangential sources for niche queries. Needs more tuning.
+- **Merge feature** (B3): Not yet built. New `/api/merge` endpoint that synthesizes all responses into one "super response" via Claude.
+- **Focus/Expand mode** (B5): Not yet built. Click card to expand full-width with larger text.
+- **Design pages RAG**: Arena/Sanctum/Nexus pages don't have RAG pipeline yet (they share useStreamQuery but have their own inline forms).
+- **Output format toggle**: Still needs UI to switch between 4 display formats.
+- **Hydra animation**: Still wave distortion only — heads don't move realistically.
+- **Design polish**: All designs need refinement.
+- **Gemini rate limits**: Free tier (10 RPM / 250 RPD) gets hit during heavy testing. Resets automatically.
 
 ### Exact next step:
-Continue iterating the Hydra ASCII art animation (make heads/necks move more realistically), then wire up real LLM API integration (Task 5), then continue design polish.
+Continue improving RAG response quality (prompt tuning, relevance calibration). Then build merge feature (B3) and focus/expand mode (B5). Then wire RAG into design variant pages.

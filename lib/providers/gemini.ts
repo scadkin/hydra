@@ -6,7 +6,7 @@
  */
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Provider } from "./types";
+import { Provider, StreamOptions } from "./types";
 
 const MODEL = "gemini-2.5-flash";
 const ENV_KEY = "GOOGLE_AI_API_KEY";
@@ -21,7 +21,7 @@ export function createGeminiProvider(): Provider {
     model: MODEL,
     enabled: apiKey.length > 0,
 
-    async *stream(prompt: string) {
+    async *stream(prompt: string, _options?: StreamOptions) {
       const client = new GoogleGenerativeAI(apiKey);
       const model = client.getGenerativeModel({ model: MODEL });
 

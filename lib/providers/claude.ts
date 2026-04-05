@@ -6,7 +6,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { Provider } from "./types";
+import { Provider, StreamOptions } from "./types";
 
 const MODEL = "claude-sonnet-4-20250514";
 const ENV_KEY = "ANTHROPIC_API_KEY";
@@ -21,7 +21,7 @@ export function createClaudeProvider(): Provider {
     model: MODEL,
     enabled: apiKey.length > 0,
 
-    async *stream(prompt: string) {
+    async *stream(prompt: string, options?: StreamOptions) {
       const client = new Anthropic({ apiKey });
 
       // The SDK returns a Stream object we can iterate over
@@ -29,6 +29,7 @@ export function createClaudeProvider(): Provider {
         model: MODEL,
         max_tokens: 4096,
         stream: true,
+        ...(options?.systemMessage ? { system: options.systemMessage } : {}),
         messages: [{ role: "user", content: prompt }],
       });
 

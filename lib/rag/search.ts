@@ -188,8 +188,8 @@ export async function searchMultiSource(
     );
   }
 
-  // HackerNews: add for tech focus
-  if (focus === "tech") {
+  // HackerNews: add for tech and general focus (HN covers many topics well)
+  if (focus === "tech" || focus === "general") {
     allPromises.push(
       searchHackerNews(primaryQuery).then((results) =>
         results.map((r) => ({

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import HydraSanctum from "../../../components/hydra/HydraSanctum";
+import SourcesPanel from "../../../components/SourcesPanel";
 import { useStreamQuery, ProviderResponse } from "../../../lib/useStreamQuery";
 
 /**
@@ -32,16 +33,17 @@ function OracleDot({
   status: "idle" | "streaming" | "done" | "error";
 }) {
   const angle = (index / total) * Math.PI * 2 - Math.PI / 2;
-  const radius = 190;
-  const x = Math.cos(angle) * radius;
-  const y = Math.sin(angle) * radius;
+  // Use percentage-based radius so dots scale with container
+  const radiusPct = 45; // % of container half-size
+  const x = Math.cos(angle) * radiusPct;
+  const y = Math.sin(angle) * radiusPct;
 
   return (
     <div
       className="absolute flex flex-col items-center gap-1"
       style={{
-        left: `calc(50% + ${x}px - 20px)`,
-        top: `calc(50% + ${y}px - 20px)`,
+        left: `calc(50% + ${x}% - 20px)`,
+        top: `calc(50% + ${y}% - 20px)`,
         width: 40,
       }}
     >
@@ -205,7 +207,7 @@ function ScrollStrip({ r, index }: { r: Response; index: number }) {
 }
 
 export default function Design2() {
-  const { providers, responses, isLoading, submit } = useStreamQuery();
+  const { providers, responses, sources, isLoading, searchingWeb, webSearch, setWebSearch, submit } = useStreamQuery();
   const [query, setQuery] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -237,7 +239,20 @@ export default function Design2() {
         >
           HYDRA
         </h1>
-        <div className="flex gap-6 text-[10px] uppercase tracking-[0.3em]">
+        <div className="flex gap-4 sm:gap-6 text-[10px] uppercase tracking-[0.3em]">
+          <a
+            href="/"
+            className="transition-colors"
+            style={{ color: "#2a2f44" }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLElement).style.color = "#c9a84c";
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLElement).style.color = "#2a2f44";
+            }}
+          >
+            Home
+          </a>
           <a
             href="/design/1"
             className="transition-colors"
@@ -272,8 +287,8 @@ export default function Design2() {
 
       {/* Summoning Circle Area */}
       <div className="relative z-10 flex flex-col items-center pt-12 pb-8">
-        {/* Circle container */}
-        <div className="relative" style={{ width: 420, height: 420 }}>
+        {/* Circle container — scales down on mobile */}
+        <div className="relative w-[300px] h-[300px] sm:w-[420px] sm:h-[420px]">
           {/* Oracle dots */}
           {providers.map((prov, i) => {
             const resp = responses.find((r) => r.id === prov.id);
@@ -290,13 +305,11 @@ export default function Design2() {
 
           {/* The summoning circle itself */}
           <div
-            className="absolute inset-0 flex items-center justify-center"
+            className="absolute inset-0 flex items-center justify-center w-[220px] h-[220px] sm:w-[320px] sm:h-[320px]"
             style={{
               left: "50%",
               top: "50%",
               transform: "translate(-50%, -50%)",
-              width: 320,
-              height: 320,
             }}
           >
             {/* Outer decorative ring */}
@@ -325,8 +338,7 @@ export default function Design2() {
             {/* Inner content area */}
             <form
               onSubmit={handleSubmit}
-              className="relative z-10 flex flex-col items-center gap-4 px-8"
-              style={{ width: 260 }}
+              className="relative z-10 flex flex-col items-center gap-3 sm:gap-4 px-4 sm:px-8 w-[180px] sm:w-[260px]"
             >
               <textarea
                 value={query}
@@ -362,10 +374,30 @@ export default function Design2() {
               >
                 {isLoading ? "CHANNELING..." : "SUMMON"}
               </button>
+
+              {/* Web search toggle */}
+              <button
+                type="button"
+                onClick={() => setWebSearch(!webSearch)}
+                className="text-[9px] uppercase tracking-[0.3em] transition-all"
+                style={{
+                  color: webSearch ? "#c9a84c88" : "#2a2844",
+                  fontFamily: "var(--font-geist-mono), monospace",
+                }}
+              >
+                {searchingWeb ? "scrying the web..." : webSearch ? "⦿ web oracle" : "⦾ web oracle"}
+              </button>
             </form>
           </div>
         </div>
       </div>
+
+      {/* Search sources */}
+      {sources.length > 0 && (
+        <div className="relative z-10 px-6">
+          <SourcesPanel sources={sources} />
+        </div>
+      )}
 
       {/* Output scrolls — full-width horizontal strips stacking vertically */}
       {responses.length > 0 && (

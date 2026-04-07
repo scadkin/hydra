@@ -127,36 +127,36 @@ After any UI change, use Puppeteer to screenshot localhost:3000, compare to refe
 - API keys are stored in `.env.local` (never committed to git).
 - All LLM calls happen server-side (in API routes) to protect API keys.
 - Responses are streamed so the user sees text appear in real-time, not after a long wait.
-- ASCII Hydra background: load REAL dragon artwork → remove background → convert to ASCII → animate with wave distortion. NEVER try to draw dragons with code shapes.
+- ASCII Hydra background: load REAL dragon artwork → remove background → convert to ASCII → breathing + shimmer only (wave distortion removed). Future: animate from 3D model video, not 2D image warping. NEVER try to draw dragons with code shapes.
 - 4 design variants exist: main page, Arena (crimson), Sanctum (gold/blue), Nexus (cyan/cyberpunk). Each has its own hydra variant.
 - Output display formats: Editorial cards (Design C), Bento grid, Columns, Stacks — all built, user likes all 4, wants a toggle.
 - YouTube transcripts: MCP server `youtube-transcript` installed + `yt-dlp` available as fallback.
 
-## Current State (updated Session 2)
+## Current State (updated Session 3)
 
 ### What's working:
-- **Real LLM API integration**: All 5 providers streaming real responses via SSE (no more mock data)
-- **Full RAG pipeline**: Query classification (regex + LLM) → query rewriting → multi-source search (Jina + Google News RSS + HackerNews) → Jina Reranker → smart snippet extraction → dynamic prompt building
-- **Web search toggle**: Users can enable/disable web search augmentation per query
+- **Real LLM API integration**: All 5 providers streaming real responses via SSE
+- **Full RAG pipeline**: Query classification → rewriting → multi-source search (Jina + Google News RSS + HackerNews) → Jina Reranker → smart snippet extraction → dynamic prompt building
+- **RAG quality tuning**: Domain diversity (max 2/domain), shorter low-relevance snippets (600 chars), stronger ignore framing, raised skip threshold (0.15), HN for general queries
+- **Web search toggle**: On all pages (main + 3 design variants)
 - **LLM toggle**: Clickable model pills to select/deselect which models to query
-- **Sources panel**: Horizontal scrollable strip showing search sources with trust tiers, freshness tags, domain info
+- **Sources panel**: On all pages — horizontal scrollable strip with trust tiers, freshness tags, domain info
 - **Knowledge cutoff display**: Verified cutoff dates shown on every response card
+- **Focus/Expand mode**: Click expand icon on any card → full-width overlay modal, Escape to close
+- **Merge feature**: `/api/merge` endpoint streams Claude synthesis of all/selected responses into a "super response" via MergeCard component
 - **Copy features**: Per-card copy (hover action), Copy All/Selected (action bar), selection checkboxes
+- **Layout toggle**: Grid/columns/stack icon buttons in action bar
 - **Hover effects**: Cards glow + scale on hover, reveal copy/expand action icons
 - **Usage tracker**: `/usage` page tracking requests, tokens, costs per provider
-- **Dynamic RAG prompting**: Prompt framing adapts based on relevance score (high/moderate/low)
-- All API keys configured in `.env.local` (Claude, Gemini/Gemma, Groq, Jina, OpenRouter disabled)
-- 4 page designs still working: main (`/`), Arena, Sanctum, Nexus
+- **Navigation**: Footer nav on main page (Arena/Sanctum/Nexus/Usage), Home links on all variant pages
+- **Responsive**: All 4 pages tested at mobile/tablet/desktop — Arena auto-fit grid, Sanctum circle scaling, Nexus mobile spacing
+- All API keys configured in `.env.local` (Claude, Gemini/Gemma, Groq, Jina)
+- 4 page designs all fully functional: main (`/`), Arena, Sanctum, Nexus
 
 ### What needs work:
-- **RAG response quality**: Dynamic relevance framing helps but models still over-anchor on tangential sources for niche queries. Needs more tuning.
-- **Merge feature** (B3): Not yet built. New `/api/merge` endpoint that synthesizes all responses into one "super response" via Claude.
-- **Focus/Expand mode** (B5): Not yet built. Click card to expand full-width with larger text.
-- **Design pages RAG**: Arena/Sanctum/Nexus pages don't have RAG pipeline yet (they share useStreamQuery but have their own inline forms).
-- **Output format toggle**: Still needs UI to switch between 4 display formats.
-- **Hydra animation**: Still wave distortion only — heads don't move realistically.
-- **Design polish**: All designs need refinement.
+- **Hydra animation**: Wave distortion removed. Video-to-ASCII pipeline exists (scripts/, AsciiPlayer.tsx, hydra-anim.json) but rendering quality was too low. Needs: higher-quality source video, better ASCII rendering, smoother playback. Currently static with breathing + shimmer.
+- **RAG v2 options**: Brave Search, Exa AI semantic search, Gemini native grounding, Claude native web search (all cost money or require migration).
 - **Gemini rate limits**: Free tier (10 RPM / 250 RPD) gets hit during heavy testing. Resets automatically.
 
 ### Exact next step:
-Continue improving RAG response quality (prompt tuning, relevance calibration). Then build merge feature (B3) and focus/expand mode (B5). Then wire RAG into design variant pages.
+Improve hydra animation — the video-to-ASCII pipeline is built but the rendering quality needs significant work. Try: higher resolution source, canvas-based renderer with better font metrics, or a completely different approach (e.g. Blender pre-rendered frames at exact ASCII resolution).

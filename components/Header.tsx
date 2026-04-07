@@ -31,17 +31,17 @@ export default function Header() {
       >
         <span className="text-white">Ask once.</span>
         <br />
-        <span className="text-[#666]">Every AI answers.</span>
+        <span className="text-[#777]">Every AI answers.</span>
       </h1>
 
       {/* Value prop — clear and specific */}
       <motion.p
-        className="mt-6 text-[17px] text-[#555] max-w-md mx-auto leading-relaxed"
+        className="mt-6 text-[17px] text-[#666] max-w-md mx-auto leading-relaxed"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        One prompt. Seven models. Streamed side by side.
+        One prompt. Five models. Streamed side by side.
       </motion.p>
     </motion.div>
   );

@@ -16,6 +16,8 @@ interface ActionBarProps {
   onSelectAll: () => void;
   onDeselectAll: () => void;
   allSelected: boolean;
+  onMerge?: () => void;
+  isMerging?: boolean;
 }
 
 export default function ActionBar({
@@ -25,6 +27,8 @@ export default function ActionBar({
   onSelectAll,
   onDeselectAll,
   allSelected,
+  onMerge,
+  isMerging,
 }: ActionBarProps) {
   const [copied, setCopied] = useState(false);
 
@@ -92,6 +96,26 @@ export default function ActionBar({
           </>
         )}
       </button>
+
+      {/* Merge button */}
+      {onMerge && doneResponses.length >= 2 && (
+        <button
+          onClick={onMerge}
+          disabled={isMerging}
+          className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.1em] px-2.5 py-1 rounded-md transition-all disabled:opacity-40"
+          style={{
+            color: isMerging ? "#888" : "#d4a574",
+            background: "#d4a57410",
+            border: "1px solid #d4a57425",
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 3v6c0 3.3 2.7 6 6 6s6-2.7 6-6V3" />
+            <path d="M12 15v6" />
+          </svg>
+          {isMerging ? "Merging..." : "Merge"}
+        </button>
+      )}
 
       {/* Response count */}
       <span className="text-[10px] font-mono text-[#333]">

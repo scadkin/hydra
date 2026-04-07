@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import HydraNexus from "../../../components/hydra/HydraNexus";
+import SourcesPanel from "../../../components/SourcesPanel";
 import { useStreamQuery, ProviderResponse } from "../../../lib/useStreamQuery";
 
 /**
@@ -31,9 +32,8 @@ function TerminalCard({ r, index }: { r: Response; index: number }) {
       initial={{ opacity: 0, x: 40 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay: index * 0.06 }}
-      className="flex-shrink-0 group relative"
+      className="flex-shrink-0 group relative w-[240px] sm:w-[280px]"
       style={{
-        width: 280,
         height: 500,
         background: "#0d0d0d",
         border: `1px solid ${r.status === "streaming" ? "#00e5ff" : "#151515"}`,
@@ -177,7 +177,7 @@ function TerminalCard({ r, index }: { r: Response; index: number }) {
 }
 
 export default function Design3() {
-  const { providers, responses, isLoading, submit } = useStreamQuery();
+  const { providers, responses, sources, isLoading, searchingWeb, webSearch, setWebSearch, submit } = useStreamQuery();
   const [query, setQuery] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -253,9 +253,22 @@ export default function Design3() {
         </div>
 
         <div
-          className="flex gap-5 text-[10px] uppercase tracking-[0.2em]"
+          className="flex gap-3 sm:gap-5 text-[10px] uppercase tracking-[0.2em]"
           style={{ fontFamily: "var(--font-geist-mono), monospace" }}
         >
+          <a
+            href="/"
+            className="transition-colors"
+            style={{ color: "#222" }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLElement).style.color = "#00e5ff";
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLElement).style.color = "#222";
+            }}
+          >
+            Home
+          </a>
           <a
             href="/design/1"
             className="transition-colors"
@@ -301,7 +314,7 @@ export default function Design3() {
       >
         <form
           onSubmit={handleSubmit}
-          className="flex items-center w-full px-5 gap-3"
+          className="flex items-center w-full px-3 sm:px-5 gap-2 sm:gap-3"
         >
           <span
             className="text-sm font-bold select-none"
@@ -334,6 +347,19 @@ export default function Design3() {
                 "2px solid #00e5ff20";
             }}
           />
+          {/* Web search toggle */}
+          <button
+            type="button"
+            onClick={() => setWebSearch(!webSearch)}
+            className="px-3 py-2 text-[9px] uppercase tracking-[0.2em] font-bold transition-all"
+            style={{
+              fontFamily: "var(--font-geist-mono), monospace",
+              color: webSearch ? "#39ff14" : "#222",
+              border: `1px solid ${webSearch ? "#39ff1430" : "#151515"}`,
+            }}
+          >
+            {searchingWeb ? "SCAN..." : webSearch ? "NET:ON" : "NET:OFF"}
+          </button>
           <button
             type="submit"
             disabled={isLoading}
@@ -349,6 +375,13 @@ export default function Design3() {
           </button>
         </form>
       </div>
+
+      {/* Search sources */}
+      {sources.length > 0 && (
+        <div className="relative z-20 px-5" style={{ borderBottom: "1px solid #111" }}>
+          <SourcesPanel sources={sources} />
+        </div>
+      )}
 
       {/* === BAND 3: Output area (remaining) === */}
       <div className="relative z-10 flex-1 flex flex-col overflow-hidden">

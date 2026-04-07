@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import HydraArena from "../../../components/hydra/HydraArena";
+import SourcesPanel from "../../../components/SourcesPanel";
 import { useStreamQuery, ProviderResponse } from "../../../lib/useStreamQuery";
 
 /**
@@ -130,7 +131,7 @@ function ArenaPanel({ r }: { r: Response }) {
 }
 
 export default function Design1() {
-  const { responses, isLoading, submit } = useStreamQuery();
+  const { responses, sources, isLoading, searchingWeb, webSearch, setWebSearch, submit } = useStreamQuery();
   const [query, setQuery] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -162,7 +163,10 @@ export default function Design1() {
         >
           HYDRA
         </h1>
-        <div className="flex gap-6 text-[11px] font-mono uppercase tracking-widest">
+        <div className="flex gap-3 sm:gap-6 text-[10px] sm:text-[11px] font-mono uppercase tracking-widest">
+          <a href="/" className="text-[#444] hover:text-[#8b2020] transition-colors">
+            Home
+          </a>
           <a href="/design/1" className="text-[#8b2020]">
             Arena
           </a>
@@ -202,6 +206,19 @@ export default function Design1() {
             placeholder="Enter your query, challenger..."
             className="flex-1 bg-transparent py-3 text-sm text-[#aaa] placeholder:text-[#2a1515] focus:outline-none font-mono"
           />
+          {/* Web search toggle */}
+          <button
+            type="button"
+            onClick={() => setWebSearch(!webSearch)}
+            className="px-3 py-3 font-mono text-[9px] uppercase tracking-widest transition-all"
+            style={{
+              color: webSearch ? "#8b2020" : "#3a1515",
+              borderLeft: "1px solid #1a0a0a",
+            }}
+            title={webSearch ? "Web search ON" : "Web search OFF"}
+          >
+            {searchingWeb ? "SEARCHING..." : webSearch ? "WEB ON" : "WEB OFF"}
+          </button>
           <button
             type="submit"
             disabled={isLoading}
@@ -216,13 +233,19 @@ export default function Design1() {
         </div>
       </form>
 
+      {/* Search sources */}
+      {sources.length > 0 && (
+        <div className="relative z-20 px-4" style={{ borderBottom: "1px solid #1a0a0a" }}>
+          <SourcesPanel sources={sources} />
+        </div>
+      )}
+
       {/* Output grid: 2 rows, edge-to-edge, filling viewport */}
       {responses.length > 0 && (
         <motion.div
           className="relative z-10 flex-1 grid gap-[1px] p-[1px]"
           style={{
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gridTemplateRows: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             background: "#1a0a0a",
             minHeight: "calc(100vh - 100px)",
           }}
@@ -246,7 +269,7 @@ export default function Design1() {
             transition={{ delay: 0.3 }}
           >
             <h2
-              className="text-6xl sm:text-8xl font-bold uppercase tracking-[0.2em] mb-4"
+              className="text-4xl sm:text-6xl md:text-8xl font-bold uppercase tracking-[0.1em] sm:tracking-[0.2em] mb-4"
               style={{
                 fontFamily:
                   "var(--font-display), var(--font-geist-sans), sans-serif",

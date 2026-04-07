@@ -14,8 +14,7 @@ import { processResults, buildRAGContext, rerankResults } from "./process";
 
 // If the best reranker score is below this, search results are too
 // tangential — skip injection so models use their own knowledge instead.
-// Below this score, search results are completely irrelevant — skip injection
-const SKIP_THRESHOLD = 0.1;
+const SKIP_THRESHOLD = 0.15;
 
 /**
  * Run the full RAG pipeline for a user query.
@@ -66,15 +65,21 @@ export async function runRAGPipeline(
       return emptyContext;
     }
 
+    // Pass relevance level so both snippets and prompts adapt
+    const relevance: "high" | "moderate" | "low" = topScore > 0.5 ? "high" : topScore > 0.2 ? "moderate" : "low";
+
     // Step 5: Process, rank, extract snippets, and build prompts
-    const sources = processResults(
+    let sources = processResults(
       rawResults,
       prompt,
-      rerankResult?.indices ?? null
+      rerankResult?.indices ?? null,
+      relevance
     );
 
-    // Pass relevance level to prompt builder so it can adjust framing
-    const relevance: "high" | "moderate" | "low" = topScore > 0.5 ? "high" : topScore > 0.2 ? "moderate" : "low";
+    // For low-relevance results, limit to 3 sources to reduce noise
+    if (relevance === "low") {
+      sources = sources.slice(0, 3);
+    }
     const context = buildRAGContext(prompt, sources, queries, relevance);
 
     return context;

@@ -13,7 +13,9 @@ import {
 } from "./constants";
 
 const MAX_SNIPPET_LENGTH = 1500;
+const MAX_SNIPPET_LENGTH_LOW = 600;  // Shorter snippets for low-relevance sources
 const MAX_SOURCES = 5;
+const MAX_PER_DOMAIN = 2;           // Cap results per domain for diversity
 
 // Common stopwords to filter from query term matching
 const STOPWORDS = new Set([
@@ -247,11 +249,13 @@ export async function rerankResults(
  * Process raw search results into scored, ranked, and snippet-extracted SearchSource objects.
  * @param query - The user's original query (used for smart snippet extraction)
  * @param rerankedIndices - Optional pre-ranked indices from Jina Reranker (A3)
+ * @param relevance - How relevant the sources are overall (affects snippet length)
  */
 export function processResults(
   rawResults: RawSearchResult[],
   query: string,
-  rerankedIndices?: number[] | null | undefined
+  rerankedIndices?: number[] | null | undefined,
+  relevance: "high" | "moderate" | "low" = "moderate"
 ): SearchSource[] {
   // Enrich all results with metadata
   const enriched = rawResults.map((r) => {
@@ -263,28 +267,40 @@ export function processResults(
     return { raw: r, domain, trustTier, freshness, sourceType, score };
   });
 
-  let top;
+  // Pick top results with domain diversity enforcement
+  let ranked;
   if (rerankedIndices && rerankedIndices.length > 0) {
-    // Use reranker ordering (A3) — indices point into rawResults
-    top = rerankedIndices
+    ranked = rerankedIndices
       .filter((i) => i < enriched.length)
-      .map((i) => enriched[i])
-      .slice(0, MAX_SOURCES);
+      .map((i) => enriched[i]);
   } else {
-    // Fallback: heuristic scoring
     enriched.sort((a, b) => b.score - a.score);
-    top = enriched.slice(0, MAX_SOURCES);
+    ranked = enriched;
+  }
+
+  // Enforce max per domain so results aren't all from one site
+  const top: typeof ranked = [];
+  const domainCounts = new Map<string, number>();
+  for (const item of ranked) {
+    const count = domainCounts.get(item.domain) ?? 0;
+    if (count >= MAX_PER_DOMAIN) continue;
+    domainCounts.set(item.domain, count + 1);
+    top.push(item);
+    if (top.length >= MAX_SOURCES) break;
   }
 
   // Apply lost-in-the-middle reordering (A5)
   const reordered = reorderForAttention(top);
+
+  // Use shorter snippets for low-relevance results to reduce noise
+  const snippetLength = relevance === "low" ? MAX_SNIPPET_LENGTH_LOW : MAX_SNIPPET_LENGTH;
 
   // Build SearchSource objects with citation indices (assigned AFTER reordering)
   return reordered.map((item, i) => ({
     index: i + 1,
     title: item.raw.title || item.domain,
     url: item.raw.url,
-    snippet: extractBestParagraphs(item.raw.content || item.raw.title, query, MAX_SNIPPET_LENGTH),
+    snippet: extractBestParagraphs(item.raw.content || item.raw.title, query, snippetLength),
     date: item.raw.date,
     domain: item.domain,
     trustTier: item.trustTier,
@@ -342,9 +358,9 @@ export function buildRAGContext(
     sourceInstruction = `Recent web search results are included below as context. They may be partially relevant to the question. Use them when applicable and cite as [1], [2], etc., but also draw on your own knowledge to give a complete answer. Don't limit yourself to what the sources say.`;
     geminiPrefix = `Web search results are included as context. Use them where relevant (cite as [1] [2]), but also use your own knowledge for a complete answer.`;
   } else {
-    // Sources are barely relevant — lead with own knowledge
-    sourceInstruction = `Some web search results are included below for background, but they may not directly address the question. Answer primarily from your own knowledge and expertise. Only cite sources if they contain directly relevant information.`;
-    geminiPrefix = `Answer from your own knowledge. Some web results are included for background but may not be directly relevant. Only cite [1] [2] etc. if actually useful.`;
+    // Sources are barely relevant — DON'T constrain the model
+    sourceInstruction = `Answer this question using your own knowledge. Some loosely related web results appear below — ignore them unless one happens to be directly useful. Do NOT force citations or anchor your answer on these results.`;
+    geminiPrefix = `Answer from your own knowledge. Ignore the web results below unless one is directly useful. Do NOT force citations.`;
   }
 
   const systemMessage = `You are a knowledgeable assistant. Today is ${today}.

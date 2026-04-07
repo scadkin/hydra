@@ -102,41 +102,12 @@ export default function AsciiRenderer({
     const imgData = ctx.getImageData(0, 0, W, H);
     const px = imgData.data;
 
-    // ─── Convert to ASCII with LOCALIZED WAVE DISTORTION ───
+    // ─── Convert to ASCII (static, no distortion) ───
     let ascii = "";
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
-        // Normalized position (0-1) for checking head regions
-        const nx = (col * cellW) / W;
-        const ny = (row * cellH) / H;
-
-        // Base wave distortion (subtle, everywhere)
-        let waveX = Math.sin(t * 0.3 + row * 0.04) * 1.5;
-        let waveY = Math.cos(t * 0.25 + col * 0.03) * 1.0;
-
-        // STRONGER distortion in head regions — this is where the "movement" happens
-        for (const region of headRegions) {
-          // Check if this character cell is within or near a head region
-          const dx = (nx - (region.x + region.w / 2)) / (region.w / 2);
-          const dy = (ny - (region.y + region.h / 2)) / (region.h / 2);
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 1.5) {
-            // Falloff: full strength at center, zero at edge
-            const strength = Math.max(0, 1.0 - dist);
-
-            // Large, slow sway — makes heads appear to move
-            const headSwayX = Math.sin(t * region.swaySpeed + region.phase) * region.swayAmountX * W * strength;
-            const headSwayY = Math.cos(t * region.swaySpeed * 0.7 + region.phase * 1.3) * region.swayAmountY * H * strength;
-
-            waveX += headSwayX;
-            waveY += headSwayY;
-          }
-        }
-
-        // Sample the pixel at the distorted position
-        const sampleX = Math.floor(col * cellW + waveX);
-        const sampleY = Math.floor(row * cellH + waveY);
+        const sampleX = col * cellW;
+        const sampleY = row * cellH;
 
         // Average brightness of the cell
         let totalBright = 0;

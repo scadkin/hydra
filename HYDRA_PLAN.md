@@ -41,27 +41,36 @@
   - [x] 8.3 Per-card copy (copy individual response)
   - [x] 8.4 Copy All/Selected with action bar
   - [x] 8.5 Selection checkboxes on response cards
-  - [ ] 8.6 Focus/Expand mode (click to expand card full-width)
-  - [ ] 8.7 Merge into super response (new /api/merge endpoint)
+  - [x] 8.6 Focus/Expand mode (click to expand card full-width)
+  - [x] 8.7 Merge into super response (new /api/merge endpoint)
 
-- [ ] 9. RAG Quality Tuning (IN PROGRESS)
-  - [ ] 9.1 Further prompt tuning for niche/tangential queries
-  - [ ] 9.2 Consider Brave Search API as complementary source
-  - [ ] 9.3 Consider Exa AI for semantic search
-  - [ ] 9.4 Gemini native grounding (v2 — requires SDK migration)
-  - [ ] 9.5 Claude native web search (v2 — costs $10/1K searches)
+- [x] 9. RAG Quality Tuning (Session 3)
+  - [x] 9.1 Stronger low-relevance prompt framing ("ignore sources unless useful")
+  - [x] 9.2 Domain diversity enforcement (max 2 per domain)
+  - [x] 9.3 Shorter snippets for low-relevance results (600 vs 1500 chars)
+  - [x] 9.4 Cap low-relevance results to 3 sources (less noise)
+  - [x] 9.5 Raised skip threshold (0.1→0.15)
+  - [x] 9.6 HackerNews for general queries (not just tech)
+  - [ ] 9.7 Consider Brave Search API as complementary source (v2)
+  - [ ] 9.8 Consider Exa AI for semantic search (v2)
+  - [ ] 9.9 Gemini native grounding (v2 — requires SDK migration)
+  - [ ] 9.10 Claude native web search (v2 — costs $10/1K searches)
 
-- [ ] 10. Design Pages RAG Integration
-  - [ ] 10.1 Wire RAG into Arena, Sanctum, Nexus pages
+- [x] 10. Design Pages RAG Integration (Session 3)
+  - [x] 10.1 Wire RAG into Arena, Sanctum, Nexus pages
 
 - [ ] 11. ASCII Hydra Animation
-  - [ ] 11.1 Make heads/necks move realistically
-  - [ ] 11.2 Consider pre-rendered frames (Ghostty-style)
+  - [x] 11.1 Removed wave distortion (looked cheap), kept breathing + shimmer
+  - [x] 11.2 Attempted video-to-ASCII pipeline (Sketchfab 3D model → screen record → ffmpeg → ASCII frames) — promising but rendering quality needs work
+  - [ ] 11.3 Needs: better video-to-ASCII renderer (canvas pre-render approach was stuttery, need smoother interpolation or higher-quality source)
 
 - [ ] 12. Design Polish
-  - [ ] 12.1 Output format toggle between 4 display types
-  - [ ] 12.2 Responsive layout testing
-  - [ ] 12.3 Screenshot comparison with award-winning sites
+  - [x] 12.1 Layout toggle (grid/columns/stack) with icons
+  - [x] 12.2 Responsive layout testing + mobile fixes (Session 3)
+  - [x] 12.3 Screenshot comparison + polish pass (Session 3)
+  - [x] 12.4 Home links on all design variant navs
+  - [x] 12.5 Footer nav on main page (Arena/Sanctum/Nexus/Usage)
+  - [x] 12.6 Text contrast improvements (subtitle, "Every AI answers")
 
 ## Additions
 
@@ -74,5 +83,11 @@
 | Session 2 | Google News RSS + HackerNews API (free) | Done | Supplementary search for news/tech queries |
 | Session 2 | Dynamic relevance-based prompt framing | Done | Prevent models over-anchoring on tangential sources |
 | Session 2 | LLM toggle, copy, hover effects | Done | User requested from original vision |
-| Session 2 | Merge feature | Planned | User wants combined "super response" |
-| Session 2 | Focus/expand mode | Planned | User wants to click and enlarge one card |
+| Session 3 | Focus/Expand mode | Done | Click card to expand full-width, Escape to close |
+| Session 3 | Merge feature | Done | /api/merge endpoint + useMerge hook + MergeCard UI |
+| Session 3 | Design pages RAG | Done | Web search toggle + sources panel on all 3 variant pages |
+| Session 3 | RAG quality tuning | Done | Domain diversity, shorter low-relevance snippets, stronger ignore framing |
+| Session 3 | Layout toggle | Done | Grid/columns/stack toggle with icon buttons in action bar |
+| Session 3 | Responsive fixes | Done | Arena auto-fit grid, Sanctum circle scaling, Nexus mobile spacing |
+| Session 3 | Design polish | Done | Text contrast, Home nav links, footer nav, model count fix |
+| Session 3 | Hydra animation cleanup | Done | Removed wave distortion, kept breathing + shimmer. Video-to-ASCII pipeline built but needs quality work |
